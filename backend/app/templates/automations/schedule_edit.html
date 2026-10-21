@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea, device_select, sim_select %}
+{% block title %}{{ _("Planification") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.automations', tab='schedules') }}"><i class="bi bi-arrow-left"></i> {{ _("Automatisations") }}</a>
+{% set aud = s.audience if s else {} %}
+<form method="post" class="row g-4 mt-1">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-lg-7">
+    <div class="card mb-4"><div class="card-body">
+      <div class="mb-3"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="name" value="{{ s.name if s else '' }}" required maxlength="150"></div>
+      <label class="form-label">{{ _("Groupes destinataires") }}</label>
+      <div class="d-flex flex-wrap gap-2 mb-2">
+        {% for g in groups %}<input type="checkbox" class="btn-check" name="groups" value="{{ g.id }}" id="sg{{ g.id }}" {{ 'checked' if g.id in (aud.get('groups') or []) }}>
+        <label class="btn btn-sm btn-outline-primary" for="sg{{ g.id }}">{{ g.name }}</label>{% endfor %}
+      </div>
+      <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="all_contacts" id="sall" {{ 'checked' if aud.get('all') }}><label class="form-check-label" for="sall">{{ _("Tous les contacts") }}</label></div>
+      <div class="d-flex justify-content-between align-items-end mb-1"><label class="form-label mb-0">{{ _("Message") }}</label>
+        <select class="form-select form-select-sm w-auto" name="template_id"><option value="">{{ _("Sans modèle") }}</option>
+          {% for t in templates %}<option value="{{ t.uuid }}" {{ 'selected' if s and s.template_id == t.id }}>{{ t.name }} ({{ t.language|upper }})</option>{% endfor %}</select></div>
+      {{ sms_textarea(value=(s.body if s and s.body else ""), rows=4, required=False, variables=["prenom", "nom", "montant", "date_echeance", "reference"]) }}
+      <div class="form-text">{{ _("Laissez vide pour utiliser le modèle sélectionné.") }}</div>
+      <div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="add_stop_footer" id="sstop" {{ 'checked' if s and s.add_stop_footer }}><label class="form-check-label" for="sstop">{{ _("Ajouter la mention de désinscription (STOP)") }}</label></div>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-4"><div class="card-header"><i class="bi bi-calendar-event"></i>{{ _("Quand ?") }}</div><div class="card-body">
+      <div class="row g-2 mb-3">
+        <div class="col-7"><label class="form-label">{{ _("Récurrence") }}</label>
+          <select class="form-select" name="recurrence" id="recurrence">{% for r, l in recurrence_labels.items() %}<option value="{{ r }}" {{ 'selected' if (s.recurrence if s else 'once') == r }}>{{ _(l) }}</option>{% endfor %}</select></div>
+        <div class="col-5"><label class="form-label">{{ _("Heure") }}</label><input class="form-control" type="time" name="run_time" value="{{ s.run_time.strftime('%H:%M') if s and s.run_time else '09:00' }}" required></div>
+      </div>
+      <div class="mb-3" data-rec="once"><label class="form-label">{{ _("Date") }}</label><input class="form-control" type="date" name="run_date" value="{{ s.run_date.isoformat() if s and s.run_date else '' }}"></div>
+      <div class="mb-3" data-rec="weekly"><label class="form-label">{{ _("Jours") }}</label><div class="d-flex flex-wrap gap-1">
+        {% for d, l in days %}<input type="checkbox" class="btn-check" name="days_of_week" value="{{ d }}" id="dw{{ d }}" {{ 'checked' if s and d in (s.days_of_week or []) }}><label class="btn btn-sm btn-outline-primary" for="dw{{ d }}">{{ _(l) }}</label>{% endfor %}</div></div>
+      <div class="mb-3" data-rec="monthly"><label class="form-label">{{ _("Jour du mois") }}</label><input class="form-control" type="number" min="1" max="31" name="day_of_month" value="{{ s.day_of_month if s and s.day_of_month else 1 }}">
+        <div class="form-text">{{ _("31 = dernier jour du mois.") }}</div></div>
+      <div class="row g-2" data-rec="daily weekly monthly">
+        <div class="col-6"><label class="form-label">{{ _("À partir du") }}</label><input class="form-control" type="date" name="start_date" value="{{ s.start_date.isoformat() if s and s.start_date else '' }}"></div>
+        <div class="col-6"><label class="form-label">{{ _("Jusqu'au") }}</label><input class="form-control" type="date" name="end_date" value="{{ s.end_date.isoformat() if s and s.end_date else '' }}"></div>
+      </div>
+      <div class="form-text mt-2">{{ _("Heure de Casablanca. La fenêtre horaire autorisée s'applique.") }}</div>
+    </div></div>
+    <div class="card mb-4"><div class="card-body">
+      <div class="row g-2">
+        <div class="col-7"><label class="form-label">{{ _("Appareil") }}</label>{{ device_select(devices, s.device_id and (devices|selectattr('id', 'equalto', s.device_id)|map(attribute='uuid')|first|string)) }}</div>
+        <div class="col-5"><label class="form-label">{{ _("SIM") }}</label>{{ sim_select(s.sim_slot if s else None) }}</div>
+      </div>
+      {% if s and s.id %}<div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" name="is_active" id="sactive" {{ 'checked' if s.is_active }}><label class="form-check-label" for="sactive">{{ _("Actif") }}</label></div>{% endif %}
+    </div></div>
+    <button class="btn btn-primary btn-lg w-100" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var sel = document.getElementById("recurrence");
+  function upd() { document.querySelectorAll("[data-rec]").forEach(function (el) { el.hidden = el.dataset.rec.split(" ").indexOf(sel.value) === -1; }); }
+  sel.addEventListener("change", upd); upd();
+})();
+</script>
+{% endblock %}

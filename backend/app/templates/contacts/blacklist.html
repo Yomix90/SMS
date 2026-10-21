@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button, pagination, empty_state %}
+{% block title %}{{ _("Liste noire") }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <form method="get" class="mb-3"><input class="form-control" name="q" value="{{ request.args.get('q', '') }}" placeholder="{{ _('Rechercher un numéro…') }}" dir="ltr"></form>
+    <div class="card">
+      {% if page.items %}
+      <div class="table-responsive"><table class="table table-hover align-middle">
+        <thead><tr><th>{{ _("Numéro") }}</th><th>{{ _("Motif") }}</th><th>{{ _("Depuis le") }}</th><th></th></tr></thead>
+        <tbody>
+        {% for b in page.items %}
+          <tr>
+            <td class="phone">{{ b.phone|phone }}</td>
+            <td>{% if b.reason == 'stop_keyword' %}<span class="badge text-bg-warning">{{ _("Réponse STOP") }}</span>
+              {% else %}<span class="badge text-bg-light border">{{ _(b.reason|capitalize) }}</span>{% endif %}</td>
+            <td class="small text-body-secondary">{{ b.created_at|dt }}</td>
+            <td class="text-end">{% if current_user.is_admin %}{{ post_button(url_for('web.blacklist_delete', bid=b.id), _("Retirer"), "x", "btn-sm btn-outline-secondary", confirm=_("Retirer ce numéro ? Il pourra de nouveau recevoir vos SMS.")) }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      <div class="card-body pt-0">{{ pagination(page, 'web.blacklist') }}</div>
+      {% else %}{{ empty_state("slash-circle", _("Liste noire vide")) }}{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <form method="post" class="card mb-3">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-plus-lg"></i>{{ _("Bloquer un numéro") }}</div>
+      <div class="card-body">
+        <input class="form-control mb-2" name="phone" required placeholder="06 12 34 56 78" dir="ltr">
+        <select class="form-select mb-3" name="reason">
+          <option value="manuel">{{ _("Manuel") }}</option><option value="plainte">{{ _("Plainte") }}</option><option value="invalide">{{ _("Invalide") }}</option>
+        </select>
+        <button class="btn btn-danger" type="submit"><i class="bi bi-slash-circle"></i> {{ _("Bloquer") }}</button>
+      </div>
+    </form>
+    <div class="alert alert-info small">{{ _("Les personnes qui répondent STOP (ou توقف) sont ajoutées automatiquement. Aucun SMS ne part vers un numéro de cette liste.") }}</div>
+  </div>
+</div>
+{% endblock %}

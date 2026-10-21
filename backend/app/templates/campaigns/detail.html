@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, post_button, pagination %}
+{% block title %}{{ c.name }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.campaigns') }}"><i class="bi bi-arrow-left"></i> {{ _("Campagnes") }}</a>
+<div class="d-flex flex-wrap align-items-center gap-2 my-2">
+  <span id="c-status">{{ status_badge(c.status) }}</span>
+  {% if c.scheduled_at %}<span class="small text-body-secondary"><i class="bi bi-clock"></i> {{ c.scheduled_at|dt }}</span>{% endif %}
+  <span class="small text-body-secondary">{{ _("Créée le") }} {{ c.created_at|dt }}{% if c.creator %} · {{ c.creator.full_name or c.creator.email }}{% endif %}</span>
+  <div class="ms-auto d-flex gap-2">
+    {% if c.status in ('running', 'scheduled') %}{{ post_button(url_for('web.campaign_action', uid=c.uuid, action='pause'), _("Pause"), "pause-fill", "btn-outline-warning btn-sm") }}{% endif %}
+    {% if c.status == 'paused' %}{{ post_button(url_for('web.campaign_action', uid=c.uuid, action='resume'), _("Reprendre"), "play-fill", "btn-outline-success btn-sm") }}{% endif %}
+    {% if c.failed %}{{ post_button(url_for('web.campaign_action', uid=c.uuid, action='retry'), _("Relancer les échecs"), "arrow-repeat", "btn-outline-primary btn-sm") }}{% endif %}
+    {% if c.status not in ('completed', 'canceled') %}{{ post_button(url_for('web.campaign_action', uid=c.uuid, action='cancel'), _("Annuler"), "x-circle", "btn-outline-danger btn-sm", confirm=_("Annuler la campagne ? Les messages non envoyés ne partiront pas.")) }}{% endif %}
+    <a class="btn btn-sm btn-outline-success" href="{{ url_for('web.messages', campaign=c.uuid, export='xlsx') }}"><i class="bi bi-file-earmark-excel"></i> {{ _("Exporter") }}</a>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between small mb-1"><span>{{ _("Progression") }}</span><span id="c-progress-label">{{ c.progress }} %</span></div>
+    <div class="progress mb-3" style="height:.8rem"><div class="progress-bar progress-bar-striped {{ 'progress-bar-animated' if c.status == 'running' }}" id="c-progress" style="width: {{ c.progress }}%"></div></div>
+    <div class="row g-3">
+      <div class="col-6 col-md">{{ stat_card(_("Total"), c.total, "people", "secondary", live="c-total") }}</div>
+      <div class="col-6 col-md">{{ stat_card(_("En attente"), c.queued, "hourglass-split", "warning", live="c-queued") }}</div>
+      <div class="col-6 col-md">{{ stat_card(_("Envoyés"), c.sent, "send-check", "primary", live="c-sent") }}</div>
+      <div class="col-6 col-md">{{ stat_card(_("Livrés"), c.delivered, "check2-all", "success", live="c-delivered") }}</div>
+      <div class="col-6 col-md">{{ stat_card(_("Échecs"), c.failed, "x-octagon", "danger", live="c-failed") }}</div>
+      <div class="col-6 col-md">{{ stat_card(_("Bloqués / annulés"), c.blocked, "slash-circle", "dark", live="c-blocked") }}</div>
+    </div>
+  </div>
+</div>
+
+{% if c.body %}
+<div class="card mb-4"><div class="card-header"><i class="bi bi-chat-text"></i>{{ _("Texte du message") }}</div>
+  <div class="card-body"><div class="bubble out" dir="auto">{{ c.body }}</div></div></div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header"><i class="bi bi-list-ul"></i>{{ _("Messages") }}
+    <div class="actions">
+      <form method="get"><select class="form-select form-select-sm" name="status" data-autosubmit>
+        <option value="">{{ _("Tous") }}</option>
+        {% for s in ["queued", "paused", "dispatched", "sent", "delivered", "failed", "blocked", "canceled"] %}
+        <option value="{{ s }}" {{ 'selected' if request.args.get('status') == s }}>{{ status_badge(s)|striptags }}</option>{% endfor %}
+      </select></form>
+    </div></div>
+  <div class="table-responsive"><table class="table table-hover align-middle small">
+    <thead><tr><th>{{ _("Numéro") }}</th><th>{{ _("Message") }}</th><th>{{ _("Statut") }}</th><th>{{ _("Mis à jour") }}</th></tr></thead>
+    <tbody>
+    {% for m in page.items %}
+      <tr data-message-id="{{ m.uuid }}">
+        <td class="phone">{{ m.phone|phone }}</td>
+        <td><div class="msg-preview" dir="auto"><a class="text-reset text-decoration-none" href="{{ url_for('web.message_detail', uid=m.uuid) }}">{{ m.body }}</a></div></td>
+        <td class="status-cell">{{ status_badge(m.status) }}{% if m.error_code %} <span class="text-danger">{{ m.error_code }}</span>{% endif %}</td>
+        <td class="text-nowrap text-body-secondary">{{ (m.delivered_at or m.sent_at or m.failed_at or m.created_at)|dt }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  <div class="card-body pt-0">{{ pagination(page, 'web.campaign_detail') }}</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener("app:campaign.update", function (e) {
+  var d = e.detail;
+  if (d.id !== "{{ c.uuid }}") return;
+  ["total", "queued", "sent", "delivered", "failed", "blocked"].forEach(function (k) { APP.setLive("c-" + k, d[k]); });
+  document.getElementById("c-progress").style.width = d.progress + "%";
+  document.getElementById("c-progress-label").textContent = d.progress + " %";
+  if (d.status === "completed") setTimeout(function () { location.reload(); }, 1500);
+});
+</script>
+{% endblock %}

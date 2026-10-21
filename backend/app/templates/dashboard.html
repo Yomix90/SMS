@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, battery %}
+{% block title %}{{ _("Tableau de bord") }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-primary" href="{{ url_for('web.send') }}"><i class="bi bi-send"></i> {{ _("Envoyer un SMS") }}</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('web.campaign_new') }}"><i class="bi bi-megaphone"></i> {{ _("Nouvelle campagne") }}</a>
+  <a class="btn btn-outline-primary" href="{{ url_for('web.imports') }}"><i class="bi bi-file-earmark-spreadsheet"></i> {{ _("Importer un fichier") }}</a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl">{{ stat_card(_("Envoyés aujourd'hui"), stats.sent, "send-check", "primary") }}</div>
+  <div class="col-6 col-xl">{{ stat_card(_("Livrés"), stats.delivered, "check2-all", "success", _("{n} % de livraison", n=stats.delivery_rate)) }}</div>
+  <div class="col-6 col-xl">{{ stat_card(_("Échecs"), stats.failed, "x-octagon", "danger") }}</div>
+  <div class="col-6 col-xl">{{ stat_card(_("Reçus"), stats.received, "inbox", "info") }}</div>
+  <div class="col-12 col-xl">{{ stat_card(_("En file d'attente"), pending, "hourglass-split", "warning") }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-graph-up"></i>{{ _("Activité des 14 derniers jours") }}
+        <div class="actions"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.reports') }}">{{ _("Rapports") }}</a></div></div>
+      <div class="card-body"><div class="chart-box"><canvas id="activity-chart"></canvas></div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history"></i>{{ _("Derniers messages") }}
+        <div class="actions"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.messages') }}">{{ _("Tout voir") }}</a></div></div>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <tbody>
+          {% for m in recent %}
+            <tr data-message-id="{{ m.uuid }}">
+              <td><i class="bi bi-{{ 'arrow-up-right text-primary' if m.direction == 'out' else 'arrow-down-left text-success' }}"></i></td>
+              <td class="phone">{{ m.phone|phone }}</td>
+              <td><div class="msg-preview" dir="auto"><a class="text-reset text-decoration-none" href="{{ url_for('web.message_detail', uid=m.uuid) }}">{{ m.body }}</a></div></td>
+              <td class="status-cell">{{ status_badge(m.status) }}</td>
+              <td class="text-body-secondary small text-nowrap">{{ m.created_at|ago }}</td>
+            </tr>
+          {% else %}
+            <tr><td class="text-center text-body-secondary py-4">{{ _("Aucun message pour l'instant.") }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-phone"></i>{{ _("Appareils") }}
+        <div class="actions"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.devices') }}">{{ _("Gérer") }}</a></div></div>
+      <ul class="list-group list-group-flush">
+        {% for d in devices %}
+        <li class="list-group-item d-flex align-items-center gap-2" data-device-id="{{ d.uuid }}">
+          <i class="bi bi-phone fs-4 text-body-secondary"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ d.name }}</div>
+            <div class="small text-body-secondary">{{ _("{n}/{max} aujourd'hui", n=usage[d.id].today, max=d.max_per_day) }} · {{ d.last_seen_at|ago }}</div>
+          </div>
+          <span data-field="battery" class="small">{{ battery(d.battery_level, d.is_charging) }}</span>
+          <span data-field="status">{{ status_badge(d.status) }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item text-center py-4">
+          <p class="text-body-secondary mb-2">{{ _("Aucun téléphone connecté.") }}</p>
+          <a class="btn btn-sm btn-primary" href="{{ url_for('web.devices') }}"><i class="bi bi-qr-code"></i> {{ _("Ajouter un appareil") }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-megaphone"></i>{{ _("Campagnes en cours") }}</div>
+      <ul class="list-group list-group-flush">
+        {% for c in running %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between mb-1">
+            <a class="fw-semibold text-reset text-decoration-none" href="{{ url_for('web.campaign_detail', uid=c.uuid) }}">{{ c.name }}</a>
+            {{ status_badge(c.status) }}
+          </div>
+          <div class="progress" role="progressbar"><div class="progress-bar" style="width: {{ c.progress }}%"></div></div>
+          <div class="small text-body-secondary mt-1">{{ c.sent + c.delivered }}/{{ c.total }} · {{ c.failed }} {{ _("échecs") }}</div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-body-secondary text-center py-4">{{ _("Aucune campagne en cours.") }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  AppCharts.activity("activity-chart", {{ chart|tojson }}, {
+    sent: {{ _("Envoyés")|tojson }}, delivered: {{ _("Livrés")|tojson }},
+    failed: {{ _("Échecs")|tojson }}, received: {{ _("Reçus")|tojson }}
+  });
+</script>
+{% endblock %}

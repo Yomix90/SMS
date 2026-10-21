@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button, empty_state %}
+{% block title %}{{ _("Automatisations") }}{% endblock %}
+{% block content %}
+<ul class="nav nav-pills mb-3 gap-1">
+  <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'schedules' }}" href="{{ url_for('web.automations', tab='schedules') }}"><i class="bi bi-calendar-event"></i> {{ _("Planifications") }}</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'triggers' }}" href="{{ url_for('web.automations', tab='triggers') }}"><i class="bi bi-lightning-charge"></i> {{ _("Déclencheurs") }}</a></li>
+  <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'keywords' }}" href="{{ url_for('web.automations', tab='keywords') }}"><i class="bi bi-reply-all"></i> {{ _("Réponses automatiques") }}</a></li>
+</ul>
+
+{% if tab == 'schedules' %}
+<div class="d-flex mb-3"><p class="text-body-secondary small mb-0">{{ _("Envois programmés à une date ou récurrents, vers des groupes de contacts.") }}</p>
+  <a class="btn btn-primary ms-auto" href="{{ url_for('web.schedule_edit') }}"><i class="bi bi-plus-lg"></i> {{ _("Nouvelle planification") }}</a></div>
+<div class="card">
+  {% if schedules %}
+  <div class="table-responsive"><table class="table table-hover align-middle">
+    <thead><tr><th>{{ _("Nom") }}</th><th>{{ _("Récurrence") }}</th><th>{{ _("Prochain envoi") }}</th><th>{{ _("Dernier envoi") }}</th><th></th></tr></thead>
+    <tbody>
+    {% for s in schedules %}
+      <tr class="{{ 'opacity-50' if not s.is_active }}">
+        <td class="fw-semibold">{{ s.name }}</td>
+        <td>{{ _(recurrence_labels[s.recurrence]) }} · {{ s.run_time.strftime("%H:%M") }}
+          {% if s.recurrence == 'weekly' %}<div class="small text-body-secondary">{% for d, l in days if d in s.days_of_week %}{{ _(l) }} {% endfor %}</div>{% endif %}
+          {% if s.recurrence == 'monthly' %}<div class="small text-body-secondary">{{ _("le {n} du mois", n=s.day_of_month) }}</div>{% endif %}</td>
+        <td>{{ s.next_run_at|dt if s.next_run_at else "—" }}</td>
+        <td>{% if s.last_campaign %}<a href="{{ url_for('web.campaign_detail', uid=s.last_campaign.uuid) }}">{{ s.last_run_at|dt }}</a>{% else %}{{ s.last_run_at|dt or "—" }}{% endif %}</td>
+        <td class="text-end text-nowrap">
+          {{ post_button(url_for('web.schedule_action', uid=s.uuid, action='toggle'), None, "pause-fill" if s.is_active else "play-fill", "btn-sm btn-light", title=_("Activer / désactiver")) }}
+          <a class="btn btn-sm btn-light" href="{{ url_for('web.schedule_edit', uid=s.uuid) }}"><i class="bi bi-pencil"></i></a>
+          {{ post_button(url_for('web.schedule_action', uid=s.uuid, action='delete'), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty_state("calendar-event", _("Aucune planification")) }}{% endif %}
+</div>
+
+{% elif tab == 'triggers' %}
+<div class="d-flex mb-3"><p class="text-body-secondary small mb-0">{{ _("Messages envoyés automatiquement chaque jour selon les échéances, anniversaires et nouveaux contacts. Un même rappel n'est jamais envoyé deux fois.") }}</p>
+  <a class="btn btn-primary ms-auto" href="{{ url_for('web.automation_edit') }}"><i class="bi bi-plus-lg"></i> {{ _("Nouveau déclencheur") }}</a></div>
+<div class="row g-3">
+  {% for a in autos %}
+  <div class="col-md-6 col-xxl-4">
+    <div class="card h-100 {{ 'opacity-50' if not a.is_active }}">
+      <div class="card-header"><i class="bi bi-{{ {'due_reminder': 'alarm', 'unpaid_followup': 'exclamation-triangle', 'birthday': 'gift', 'welcome': 'emoji-smile'}[a.trigger] }}"></i>{{ a.name }}
+        <div class="actions">{% if a.is_active %}<span class="badge text-bg-success">{{ _("Actif") }}</span>{% else %}<span class="badge text-bg-secondary">{{ _("Inactif") }}</span>{% endif %}</div></div>
+      <div class="card-body small">
+        <div class="mb-1"><strong>{{ _(trigger_labels[a.trigger]) }}</strong> · {{ _("chaque jour à {t}", t=a.run_time.strftime("%H:%M")) }}</div>
+        {% if a.trigger == 'due_reminder' %}<div>{{ _("Jours avant l'échéance :") }} {{ a.config.get('days_before', [])|join(', ') }}</div>{% endif %}
+        {% if a.trigger == 'unpaid_followup' %}<div>{{ _("Jours après l'échéance :") }} {{ a.config.get('days_after', [])|join(', ') }} · {{ _("max {n} relances", n=a.config.get('max', 3)) }}</div>{% endif %}
+        <div class="text-body-secondary mt-1">{{ _("Modèles") }} : {{ a.template_fr.name if a.template_fr else "—" }} (FR) · {{ a.template_ar.name if a.template_ar else "—" }} (AR)</div>
+        <div class="text-body-secondary">{{ _("{n} messages envoyés", n=run_counts[a.id]) }} · {{ _("dernière exécution") }} {{ a.last_run_at|ago }}</div>
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2">
+        {{ post_button(url_for('web.automation_action', aid=a.id, action='toggle'), _("Désactiver") if a.is_active else _("Activer"), None, "btn-sm btn-light") }}
+        {{ post_button(url_for('web.automation_action', aid=a.id, action='run'), _("Exécuter maintenant"), "play", "btn-sm btn-outline-primary", confirm=True) }}
+        <a class="btn btn-sm btn-light" href="{{ url_for('web.automation_edit', aid=a.id) }}"><i class="bi bi-pencil"></i></a>
+        <span class="ms-auto">{{ post_button(url_for('web.automation_action', aid=a.id, action='delete'), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}</span>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="col-12"><div class="card">{{ empty_state("lightning-charge", _("Aucun déclencheur")) }}</div></div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="d-flex mb-3"><p class="text-body-secondary small mb-0">{{ _("Réponses envoyées automatiquement quand un SMS reçu contient un mot-clé. Les mots STOP / توقف sont gérés automatiquement.") }}</p>
+  <a class="btn btn-primary ms-auto" href="{{ url_for('web.keyword_edit') }}"><i class="bi bi-plus-lg"></i> {{ _("Nouvelle règle") }}</a></div>
+<div class="card">
+  {% if rules %}
+  <div class="table-responsive"><table class="table table-hover align-middle">
+    <thead><tr><th>{{ _("Mots-clés") }}</th><th>{{ _("Condition") }}</th><th>{{ _("Action") }}</th><th>{{ _("Réponse") }}</th><th class="text-end">{{ _("Utilisations") }}</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rules %}
+      <tr class="{{ 'opacity-50' if not r.is_active }}">
+        <td>{% for k in r.keywords %}<code>{{ k }}</code> {% endfor %}</td>
+        <td class="small">{{ _(match_labels[r.match_type]) }}</td>
+        <td class="small">{{ _(action_labels[r.action]) }}{% if r.action_value %} : {{ r.action_value }}{% endif %}</td>
+        <td><div class="msg-preview small" dir="auto">{{ r.reply_body or "—" }}</div></td>
+        <td class="text-end">{{ r.hit_count }}</td>
+        <td class="text-end text-nowrap">
+          {{ post_button(url_for('web.keyword_action', rid=r.id, action='toggle'), None, "pause-fill" if r.is_active else "play-fill", "btn-sm btn-light") }}
+          <a class="btn btn-sm btn-light" href="{{ url_for('web.keyword_edit', rid=r.id) }}"><i class="bi bi-pencil"></i></a>
+          {{ post_button(url_for('web.keyword_action', rid=r.id, action='delete'), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+  {% else %}{{ empty_state("reply-all", _("Aucune règle")) }}{% endif %}
+</div>
+{% endif %}
+{% endblock %}

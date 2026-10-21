@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, post_button, empty_state %}
+{% block title %}{{ _("Notifications") }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header"><i class="bi bi-bell"></i>{{ _("Notifications") }}
+    <div class="actions">{{ post_button(url_for('web.notifications_read'), _("Tout marquer comme lu"), "check2-all") }}</div></div>
+  {% if page.items %}
+  <ul class="list-group list-group-flush">
+    {% for n in page.items %}
+    <li class="list-group-item d-flex gap-3 {{ '' if n.is_read else 'bg-primary-subtle' }}">
+      <i class="bi bi-{{ {'device.offline': 'phone-vibrate text-danger', 'message.failed': 'x-octagon text-danger', 'campaign.completed': 'flag text-success', 'abuse.detected': 'shield-exclamation text-danger', 'webhook.disabled': 'plug text-warning', 'schedule.failed': 'calendar-x text-warning'}.get(n.type, 'info-circle text-primary') }} fs-5"></i>
+      <div class="flex-grow-1">
+        <div class="fw-semibold">{% if n.link %}<a class="text-reset" href="{{ n.link }}">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}</div>
+        {% if n.body %}<div class="small text-body-secondary">{{ n.body }}</div>{% endif %}
+      </div>
+      <small class="text-body-secondary text-nowrap">{{ n.created_at|dt }}</small>
+    </li>
+    {% endfor %}
+  </ul>
+  <div class="card-body">{{ pagination(page, 'web.notifications') }}</div>
+  {% else %}
+  {{ empty_state("bell-slash", _("Aucune notification")) }}
+  {% endif %}
+</div>
+{% endblock %}

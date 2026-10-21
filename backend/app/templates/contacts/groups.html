@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button, empty_state %}
+{% block title %}{{ _("Groupes") }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      {% if groups %}
+      <div class="table-responsive"><table class="table table-hover align-middle">
+        <thead><tr><th>{{ _("Nom") }}</th><th>{{ _("Description") }}</th><th class="text-end">{{ _("Contacts") }}</th><th></th></tr></thead>
+        <tbody>
+        {% for g in groups %}
+          <tr>
+            <td><span class="d-inline-block rounded-circle me-2" style="width:10px;height:10px;background:{{ g.color or '#94a3b8' }}"></span>
+              <a class="fw-semibold text-reset" href="{{ url_for('web.contacts', group=g.id) }}">{{ g.name }}</a></td>
+            <td class="small text-body-secondary">{{ g.description or "" }}</td>
+            <td class="text-end">{{ counts.get(g.id, 0) }}</td>
+            <td class="text-end text-nowrap">
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('web.campaign_new', group=g.id) }}" title="{{ _('Campagne') }}"><i class="bi bi-megaphone"></i></a>
+              <button class="btn btn-sm btn-light" type="button" data-edit-group='{{ {"id": g.id, "name": g.name, "description": g.description or "", "color": g.color or "#0d6efd"}|tojson }}'><i class="bi bi-pencil"></i></button>
+              {{ post_button(url_for('web.group_delete', gid=g.id), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}{{ empty_state("collection", _("Aucun groupe"), _("Les groupes servent à cibler vos campagnes.")) }}{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <form method="post" class="card" id="group-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="group_id" id="group_id">
+      <div class="card-header"><i class="bi bi-plus-lg"></i><span id="group-form-title">{{ _("Nouveau groupe") }}</span></div>
+      <div class="card-body">
+        <div class="mb-3"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="name" id="g-name" required maxlength="100"></div>
+        <div class="mb-3"><label class="form-label">{{ _("Description") }}</label><input class="form-control" name="description" id="g-desc" maxlength="255"></div>
+        <div class="mb-3"><label class="form-label">{{ _("Couleur") }}</label><input class="form-control form-control-color" type="color" name="color" id="g-color" value="#0d6efd"></div>
+        <button class="btn btn-primary" type="submit">{{ _("Enregistrer") }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-edit-group]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    var g = JSON.parse(b.dataset.editGroup);
+    document.getElementById("group_id").value = g.id;
+    document.getElementById("g-name").value = g.name;
+    document.getElementById("g-desc").value = g.description;
+    document.getElementById("g-color").value = g.color;
+    document.getElementById("group-form-title").textContent = {{ _("Modifier le groupe")|tojson }};
+    document.getElementById("g-name").focus();
+  });
+});
+</script>
+{% endblock %}

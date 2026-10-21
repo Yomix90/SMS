@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea, device_select, sim_select %}
+{% block title %}{{ _("Nouvelle campagne") }}{% endblock %}
+{% block content %}
+{% set selected_groups = form.getlist('groups')|map('int')|list if form.getlist is defined else (form.groups or []) %}
+<form method="post" id="campaign-form" class="row g-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-xl-7">
+    <div class="card mb-4">
+      <div class="card-header"><span class="badge rounded-pill text-bg-primary">1</span>{{ _("Destinataires") }}</div>
+      <div class="card-body">
+        <div class="mb-3"><label class="form-label">{{ _("Nom de la campagne") }}</label>
+          <input class="form-control" name="name" value="{{ form.name or '' }}" maxlength="150" placeholder="{{ _('ex. Relance impayés novembre') }}"></div>
+        <label class="form-label">{{ _("Groupes") }}</label>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+          {% for g in groups %}
+          <input type="checkbox" class="btn-check" name="groups" value="{{ g.id }}" id="g{{ g.id }}" {{ 'checked' if g.id in selected_groups }} data-preview>
+          <label class="btn btn-sm btn-outline-primary" for="g{{ g.id }}">{{ g.name }} <span class="badge text-bg-light">{{ g.contacts|length }}</span></label>
+          {% else %}<span class="text-body-secondary small">{{ _("Aucun groupe.") }} <a href="{{ url_for('web.groups') }}">{{ _("Créer un groupe") }}</a></span>{% endfor %}
+        </div>
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" name="all_contacts" id="all_contacts" data-preview {{ 'checked' if form.all_contacts }}>
+          <label class="form-check-label" for="all_contacts">{{ _("Tous les contacts") }}</label>
+        </div>
+        {% if groups %}
+        <details class="mb-3"><summary class="small">{{ _("Exclure des groupes") }}</summary>
+          <div class="d-flex flex-wrap gap-2 mt-2">
+          {% for g in groups %}
+            <input type="checkbox" class="btn-check" name="exclude_groups" value="{{ g.id }}" id="x{{ g.id }}" data-preview>
+            <label class="btn btn-sm btn-outline-danger" for="x{{ g.id }}">{{ g.name }}</label>
+          {% endfor %}</div>
+        </details>
+        {% endif %}
+        <label class="form-label" for="numbers">{{ _("Numéros supplémentaires") }}</label>
+        <textarea class="form-control" name="numbers" id="numbers" rows="3" dir="ltr" data-preview placeholder="0612345678&#10;+212700112233">{{ form.numbers or '' }}</textarea>
+        <div class="form-text">{{ _("Un numéro par ligne. Pour un fichier Excel avec des colonnes personnalisées, utilisez l'import.") }}</div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><span class="badge rounded-pill text-bg-primary">2</span>{{ _("Message") }}
+        <div class="actions">
+          <select class="form-select form-select-sm" name="template_id" id="template_id">
+            <option value="">{{ _("Sans modèle") }}</option>
+            {% for t in templates %}<option value="{{ t.uuid }}" data-body="{{ t.body }}" {{ 'selected' if form.template_id == t.uuid|string }}>{{ t.name }} ({{ t.language|upper }})</option>{% endfor %}
+          </select>
+        </div></div>
+      <div class="card-body">
+        {{ sms_textarea(value=form.body or "", rows=6, variables=variables) }}
+        <div class="form-text mb-3">{{ _("Variables disponibles : champs du contact, colonnes personnalisées et échéance impayée la plus proche ({montant}, {date_echeance}, {reference}).") }}</div>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="add_stop_footer" id="add_stop_footer" data-preview {{ 'checked' if form.add_stop_footer }}>
+          <label class="form-check-label" for="add_stop_footer">{{ _("Ajouter la mention de désinscription (STOP)") }}</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="badge rounded-pill text-bg-primary">3</span>{{ _("Envoi") }}</div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-7"><label class="form-label">{{ _("Appareil") }}</label>{{ device_select(devices, form.device_id) }}</div>
+          <div class="col-md-5"><label class="form-label">{{ _("SIM") }}</label>{{ sim_select() }}</div>
+        </div>
+        <div class="d-flex flex-wrap gap-3 align-items-center mb-2">
+          <div class="form-check"><input class="form-check-input" type="radio" name="when" value="now" id="when-now" {{ 'checked' if form.when != 'later' }}>
+            <label class="form-check-label" for="when-now">{{ _("Envoyer maintenant") }}</label></div>
+          <div class="form-check"><input class="form-check-input" type="radio" name="when" value="later" id="when-later" {{ 'checked' if form.when == 'later' }}>
+            <label class="form-check-label" for="when-later">{{ _("Planifier") }}</label></div>
+          <input class="form-control w-auto" type="datetime-local" name="scheduled_at" value="{{ form.scheduled_at or '' }}">
+        </div>
+        <div class="form-text">{{ _("Les envois respectent la fenêtre horaire et les limites de chaque appareil.") }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-5">
+    <div class="card position-sticky" style="top: 80px">
+      <div class="card-header"><i class="bi bi-eye"></i>{{ _("Aperçu") }}
+        <div class="actions">
+          <button type="button" class="btn btn-sm btn-light" id="prev-rec" title="{{ _('Précédent') }}"><i class="bi bi-chevron-{{ 'right' if text_dir == 'rtl' else 'left' }}"></i></button>
+          <button type="button" class="btn btn-sm btn-light" id="next-rec" title="{{ _('Suivant') }}"><i class="bi bi-chevron-{{ 'left' if text_dir == 'rtl' else 'right' }}"></i></button>
+        </div></div>
+      <div class="card-body">
+        <div class="d-flex justify-content-between small mb-2">
+          <span><strong id="pv-count">0</strong> {{ _("destinataires") }}</span>
+          <span class="text-body-secondary" id="pv-recipient"></span>
+        </div>
+        <div class="phone-preview mb-2"><div class="d-flex flex-column align-items-end"><div class="bubble out" id="pv-text" dir="auto">…</div></div></div>
+        <div class="alert alert-warning py-2 small" id="pv-missing" hidden></div>
+        <div class="small text-body-secondary" id="pv-sms"></div>
+        <hr>
+        <button class="btn btn-primary w-100 btn-lg" type="submit" data-confirm-count><i class="bi bi-send"></i> {{ _("Lancer la campagne") }}</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var form = document.getElementById("campaign-form"), index = 0, timer, count = 0;
+  var T = { missing: {{ _("Variables vides pour ce destinataire :")|tojson }}, sms: {{ _("SMS par destinataire")|tojson }},
+            total: {{ _("SMS au total (estimation)")|tojson }}, confirm: {{ _("Envoyer à {n} destinataires ?")|tojson }} };
+  function refresh() {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      var fd = new FormData(form); fd.set("index", index);
+      APP.post("{{ url_for('web.campaign_preview') }}", fd).then(function (d) {
+        count = d.count; index = d.index;
+        document.getElementById("pv-count").textContent = d.count;
+        document.getElementById("pv-recipient").textContent = d.recipient ? ((d.recipient.name ? d.recipient.name + " · " : "") + d.recipient.phone + " (" + (d.index + 1) + "/" + d.count + ")") : "";
+        document.getElementById("pv-text").textContent = d.text || "…";
+        var miss = document.getElementById("pv-missing");
+        miss.hidden = !(d.missing && d.missing.length);
+        if (d.missing && d.missing.length) miss.textContent = T.missing + " " + d.missing.map(function (v) { return "{" + v + "}"; }).join(", ");
+        document.getElementById("pv-sms").textContent = d.sms ? (d.sms.segments + " " + T.sms + " · ≈ " + (d.sms.segments * d.count) + " " + T.total) : "";
+      });
+    }, 300);
+  }
+  form.addEventListener("input", refresh);
+  form.addEventListener("change", refresh);
+  document.getElementById("prev-rec").addEventListener("click", function () { index = Math.max(0, index - 1); refresh(); });
+  document.getElementById("next-rec").addEventListener("click", function () { index = Math.min(count - 1, index + 1); refresh(); });
+  var tpl = document.getElementById("template_id"), body = document.getElementById("body");
+  tpl.addEventListener("change", function () {
+    var o = tpl.selectedOptions[0];
+    if (o && o.dataset.body) { body.value = o.dataset.body; body.dispatchEvent(new Event("input", { bubbles: true })); }
+  });
+  form.addEventListener("submit", function (e) {
+    if (!window.confirm(T.confirm.replace("{n}", count))) e.preventDefault();
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% for c in conversations %}
+<a class="conv-item {{ 'active' if current == c.id }} {{ 'unread' if c.unread_count }}" href="{{ url_for('web.inbox', c=c.id, view=request.args.get('view', 'all')) }}" data-conv-id="{{ c.id }}">
+  <span class="avatar flex-shrink-0">{{ (c.contact.first_name or c.contact.last_name or "#")[:1]|upper if c.contact else "#" }}</span>
+  <div class="min-w-0 flex-grow-1" style="min-width:0">
+    <div class="name">{{ c.contact.full_name if c.contact and c.contact.full_name else "" }}<span class="phone {{ 'small text-body-secondary fw-normal' if c.contact and c.contact.full_name }}">{{ (" " ~ c.phone|phone) if c.contact and c.contact.full_name else c.phone|phone }}</span></div>
+    <div class="preview" dir="auto">{% if c.last_direction == 'out' %}<i class="bi bi-reply"></i> {% endif %}{{ c.last_message_preview or "" }}</div>
+    {% if c.labels %}<div>{% for l in c.labels %}<span class="badge" style="background:{{ l.color }}">{{ l.name }}</span> {% endfor %}</div>{% endif %}
+  </div>
+  <div class="meta">{{ c.last_message_at|ago }}{% if c.unread_count %}<div><span class="badge rounded-pill text-bg-primary">{{ c.unread_count }}</span></div>{% endif %}</div>
+</a>
+{% else %}
+<div class="empty-state"><i class="bi bi-chat-square"></i><h3>{{ _("Aucune conversation") }}</h3></div>
+{% endfor %}

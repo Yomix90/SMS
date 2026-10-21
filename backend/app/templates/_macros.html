@@ -1,0 +1,84 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{# Bouton POST (action irréversible : confirmation JS via data-confirm) #}
+{% macro post_button(url, label, icon=None, cls="btn-outline-secondary btn-sm", confirm=False, title=None) -%}
+<form method="post" action="{{ url }}" class="d-inline"{% if confirm %} data-confirm="{{ confirm if confirm is string else '' }}"{% endif %}>
+  {{ csrf() }}<button type="submit" class="btn {{ cls }}"{% if title %} title="{{ title }}"{% endif %}>{% if icon %}<i class="bi bi-{{ icon }}"></i>{% endif %}{% if label %} {{ label }}{% endif %}</button>
+</form>
+{%- endmacro %}
+
+{% macro pagination(p, endpoint) -%}
+{% if p.pages > 1 %}
+<nav class="d-flex justify-content-between align-items-center mt-3">
+  <small class="text-body-secondary">{{ _("{a}–{b} sur {n}", a=(p.page - 1) * p.per_page + 1, b=[p.page * p.per_page, p.total]|min, n=p.total) }}</small>
+  <ul class="pagination pagination-sm mb-0">
+    {% set args = dict(request.view_args or {}) %}{% set _unused = args.update(request.args.to_dict()) %}
+    <li class="page-item {{ 'disabled' if not p.has_prev }}"><a class="page-link" href="{{ url_for(endpoint, **dict(args, page=p.prev_num or 1)) }}"><i class="bi bi-chevron-{{ 'right' if text_dir == 'rtl' else 'left' }}"></i></a></li>
+    {% for n in p.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+      {% if n %}<li class="page-item {{ 'active' if n == p.page }}"><a class="page-link" href="{{ url_for(endpoint, **dict(args, page=n)) }}">{{ n }}</a></li>
+      {% else %}<li class="page-item disabled"><span class="page-link">…</span></li>{% endif %}
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if not p.has_next }}"><a class="page-link" href="{{ url_for(endpoint, **dict(args, page=p.next_num or p.pages)) }}"><i class="bi bi-chevron-{{ 'left' if text_dir == 'rtl' else 'right' }}"></i></a></li>
+  </ul>
+</nav>
+{% endif %}
+{%- endmacro %}
+
+{% macro empty_state(icon, title, text=None) -%}
+<div class="empty-state">
+  <i class="bi bi-{{ icon }}"></i>
+  <h3>{{ title }}</h3>
+  {% if text %}<p>{{ text }}</p>{% endif %}
+  {{ caller() if caller else "" }}
+</div>
+{%- endmacro %}
+
+{# Zone de saisie SMS avec compteur caractères / segments et boutons de variables #}
+{% macro sms_textarea(name="body", value="", rows=5, required=True, variables=None, id="body", placeholder=None) -%}
+<div class="sms-editor">
+  {% if variables %}
+  <div class="var-buttons mb-2">
+    {% for v in variables %}<button type="button" class="btn btn-sm btn-outline-primary" data-insert-var="{{ v }}">{{ '{' }}{{ v }}{{ '}' }}</button>{% endfor %}
+  </div>
+  {% endif %}
+  <textarea class="form-control sms-input" name="{{ name }}" id="{{ id }}" rows="{{ rows }}" maxlength="1600" dir="auto"
+            {% if required %}required{% endif %} placeholder="{{ placeholder or _('Votre message…') }}" data-sms-counter="#{{ id }}-counter">{{ value }}</textarea>
+  <div class="sms-counter" id="{{ id }}-counter"></div>
+</div>
+{%- endmacro %}
+
+{% macro device_select(devices, selected=None, name="device_id", allow_auto=True) -%}
+<select class="form-select" name="{{ name }}" data-device-select>
+  {% if allow_auto %}<option value="">{{ _("Automatique (appareil disponible)") }}</option>{% endif %}
+  {% for d in devices %}
+  <option value="{{ d.uuid }}" data-sims='{{ d.sims|map(attribute="slot_index")|list|tojson }}' {{ 'selected' if selected and selected == d.uuid|string }}>
+    {{ d.name }} — {{ _("en ligne") if d.status == "online" else _("hors ligne") }}</option>
+  {% endfor %}
+</select>
+{%- endmacro %}
+
+{% macro sim_select(selected=None, name="sim_slot") -%}
+<select class="form-select" name="{{ name }}">
+  <option value="">{{ _("SIM par défaut") }}</option>
+  <option value="0" {{ 'selected' if selected == 0 }}>SIM 1</option>
+  <option value="1" {{ 'selected' if selected == 1 }}>SIM 2</option>
+</select>
+{%- endmacro %}
+
+{% macro stat_card(label, value, icon, color="primary", sub=None, live=None) -%}
+<div class="stat-card">
+  <div class="stat-icon text-{{ color }} bg-{{ color }}-subtle"><i class="bi bi-{{ icon }}"></i></div>
+  <div>
+    <div class="stat-label">{{ label }}</div>
+    <div class="stat-value"{% if live %} data-live="{{ live }}"{% endif %}>{{ value }}</div>
+    {% if sub %}<div class="stat-sub">{{ sub }}</div>{% endif %}
+  </div>
+</div>
+{%- endmacro %}
+
+{% macro battery(level, charging) -%}
+{% if level is not none %}
+<span class="battery {{ 'text-danger' if level < 20 else ('text-warning' if level < 40 else 'text-success') }}">
+  <i class="bi bi-battery{{ '-charging' if charging else ('-full' if level > 70 else ('-half' if level > 25 else '')) }}"></i> {{ level }}%</span>
+{% else %}<span class="text-body-secondary">—</span>{% endif %}
+{%- endmacro %}

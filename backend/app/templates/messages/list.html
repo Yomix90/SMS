@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, empty_state %}
+{% block title %}{{ _("Historique des messages") }}{% endblock %}
+{% block content %}
+{% set a = request.args %}
+<form class="filters" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Du") }}</label><input class="form-control form-control-sm" type="date" name="from" value="{{ a.get('from', '') }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Au") }}</label><input class="form-control form-control-sm" type="date" name="to" value="{{ a.get('to', '') }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Statut") }}</label>
+      <select class="form-select form-select-sm" name="status">
+        <option value="">{{ _("Tous") }}</option>
+        {% for s in ["queued", "scheduled", "dispatched", "sent", "delivered", "failed", "blocked", "canceled", "received"] %}
+        <option value="{{ s }}" {{ 'selected' if a.get('status') == s }}>{{ status_badge(s)|striptags }}</option>{% endfor %}
+      </select></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Sens") }}</label>
+      <select class="form-select form-select-sm" name="direction">
+        <option value="">{{ _("Tous") }}</option>
+        <option value="out" {{ 'selected' if a.get('direction') == 'out' }}>{{ _("Sortants") }}</option>
+        <option value="in" {{ 'selected' if a.get('direction') == 'in' }}>{{ _("Entrants") }}</option>
+      </select></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Appareil") }}</label>
+      <select class="form-select form-select-sm" name="device">
+        <option value="">{{ _("Tous") }}</option>
+        {% for d in devices %}<option value="{{ d.uuid }}" {{ 'selected' if a.get('device') == d.uuid|string }}>{{ d.name }}</option>{% endfor %}
+      </select></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Campagne") }}</label>
+      <select class="form-select form-select-sm" name="campaign">
+        <option value="">{{ _("Toutes") }}</option>
+        {% for c in campaigns %}<option value="{{ c.uuid }}" {{ 'selected' if a.get('campaign') == c.uuid|string }}>{{ c.name }}</option>{% endfor %}
+      </select></div>
+    <div class="col-6 col-md-3"><label class="form-label small">{{ _("Numéro") }}</label><input class="form-control form-control-sm" name="phone" value="{{ a.get('phone', '') }}" dir="ltr"></div>
+    <div class="col-6 col-md-3"><label class="form-label small">{{ _("Texte contient") }}</label><input class="form-control form-control-sm" name="q" value="{{ a.get('q', '') }}"></div>
+    <div class="col-12 col-md-6 d-flex gap-2 justify-content-md-end">
+      <button class="btn btn-sm btn-primary" type="submit"><i class="bi bi-funnel"></i> {{ _("Filtrer") }}</button>
+      <a class="btn btn-sm btn-light" href="{{ url_for('web.messages') }}">{{ _("Réinitialiser") }}</a>
+      <a class="btn btn-sm btn-outline-success" href="{{ url_for('web.messages', **dict(a.to_dict(), export='xlsx')) }}"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+      <a class="btn btn-sm btn-outline-danger" href="{{ url_for('web.messages', **dict(a.to_dict(), export='pdf')) }}"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+    </div>
+  </div>
+</form>
+
+<div class="card">
+  {% if page.items %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th></th><th>{{ _("Date") }}</th><th>{{ _("Numéro") }}</th><th>{{ _("Message") }}</th><th>{{ _("Appareil") }}</th><th>{{ _("Statut") }}</th></tr></thead>
+      <tbody>
+      {% for m in page.items %}
+        <tr data-message-id="{{ m.uuid }}">
+          <td><i class="bi bi-{{ 'arrow-up-right text-primary' if m.direction == 'out' else 'arrow-down-left text-success' }}"></i></td>
+          <td class="text-nowrap small">{{ (m.received_at or m.created_at)|dt }}</td>
+          <td class="phone">{{ m.phone|phone }}</td>
+          <td><div class="msg-preview" dir="auto"><a class="text-reset text-decoration-none" href="{{ url_for('web.message_detail', uid=m.uuid) }}">{{ m.body }}</a></div>
+            {% if m.segments > 1 %}<span class="badge text-bg-light border">{{ m.segments }} SMS</span>{% endif %}</td>
+          <td class="small text-nowrap">{{ device_names.get(m.device_id, "—") }}{% if m.sim_slot is not none %} · SIM {{ m.sim_slot + 1 }}{% endif %}</td>
+          <td class="status-cell">{{ status_badge(m.status) }}{% if m.error_code %}<div class="small text-danger">{{ m.error_code }}</div>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">{{ pagination(page, 'web.messages') }}</div>
+  {% else %}
+  {{ empty_state("search", _("Aucun message ne correspond aux filtres.")) }}
+  {% endif %}
+</div>
+{% endblock %}

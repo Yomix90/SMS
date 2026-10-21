@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, empty_state %}
+{% block title %}{{ _("Campagnes") }}{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" class="d-flex gap-2">
+    <select class="form-select form-select-sm" name="status" data-autosubmit>
+      <option value="">{{ _("Tous les statuts") }}</option>
+      {% for s in ["running", "scheduled", "paused", "completed", "canceled"] %}
+      <option value="{{ s }}" {{ 'selected' if request.args.get('status') == s }}>{{ status_badge(s)|striptags }}</option>{% endfor %}
+    </select>
+  </form>
+  <a class="btn btn-primary ms-auto" href="{{ url_for('web.campaign_new') }}"><i class="bi bi-plus-lg"></i> {{ _("Nouvelle campagne") }}</a>
+</div>
+<div class="card">
+  {% if page.items %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th>{{ _("Nom") }}</th><th>{{ _("Statut") }}</th><th style="min-width:180px">{{ _("Progression") }}</th>
+        <th class="text-end">{{ _("Livrés") }}</th><th class="text-end">{{ _("Échecs") }}</th><th>{{ _("Source") }}</th><th>{{ _("Créée le") }}</th></tr></thead>
+      <tbody>
+      {% for c in page.items %}
+        <tr>
+          <td><a class="fw-semibold text-reset text-decoration-none" href="{{ url_for('web.campaign_detail', uid=c.uuid) }}">{{ c.name }}</a>
+            {% if c.scheduled_at and c.status == 'scheduled' %}<div class="small text-body-secondary"><i class="bi bi-clock"></i> {{ c.scheduled_at|dt }}</div>{% endif %}</td>
+          <td>{{ status_badge(c.status) }}</td>
+          <td><div class="progress"><div class="progress-bar" style="width: {{ c.progress }}%"></div></div>
+            <div class="small text-body-secondary">{{ c.sent + c.delivered }}/{{ c.total }}</div></td>
+          <td class="text-end text-success fw-semibold">{{ c.delivered }}</td>
+          <td class="text-end {{ 'text-danger fw-semibold' if c.failed }}">{{ c.failed }}</td>
+          <td><span class="badge text-bg-light border">{{ source_label(c.source) }}</span></td>
+          <td class="small text-nowrap">{{ c.created_at|dt }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">{{ pagination(page, 'web.campaigns') }}</div>
+  {% else %}
+  {% call empty_state("megaphone", _("Aucune campagne"), _("Envoyez un message personnalisé à un groupe de contacts ou à une liste de numéros.")) %}
+    <a class="btn btn-primary mt-2" href="{{ url_for('web.campaign_new') }}">{{ _("Créer une campagne") }}</a>
+  {% endcall %}
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+# SMS Gateway — production (VPS)
+#   cd deploy && ./setup.sh && ./init-letsencrypt.sh
+# Seul Nginx expose des ports (80/443) ; PostgreSQL et l'application restent sur le réseau interne.
+
+name: smsgateway
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sms}
+      POSTGRES_USER: ${POSTGRES_USER:-sms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définir POSTGRES_PASSWORD dans .env}
+      TZ: Africa/Casablanca
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+    logging: &logging
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  web:
+    build:
+      context: ../backend
+    image: smsgateway-web:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sms}
+      PUBLIC_BASE_URL: https://${DOMAIN:?définir DOMAIN dans .env}
+      SESSION_COOKIE_SECURE: "true"
+      TZ: Africa/Casablanca
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - instance:/app/instance          # imports Excel, rapports d'erreurs, exports
+    expose:
+      - "8000"
+    networks: [internal, edge]
+    logging: *logging
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      TZ: Africa/Casablanca
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro      # envsubst ${DOMAIN} au démarrage
+      - ./nginx/snippets:/etc/nginx/snippets:ro
+      - ./downloads:/var/www/downloads:ro              # APK Android téléchargeable en HTTPS
+      - certbot-www:/var/www/certbot:ro
+      - letsencrypt:/etc/letsencrypt:ro
+    # Recharge la configuration toutes les 6 h pour prendre en compte les certificats renouvelés
+    command: >
+      /bin/sh -c "while :; do sleep 21600 & wait $${!}; nginx -s reload; done &
+      exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    networks: [edge]
+    logging: *logging
+
+  certbot:
+    image: certbot/certbot:v2.11.0
+    restart: unless-stopped
+    volumes:
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    # Renouvellement automatique (certbot ne renouvelle qu'à moins de 30 jours de l'expiration)
+    entrypoint: >
+      /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet;
+      sleep 43200 & wait $${!}; done"
+    networks: [edge]
+    logging: *logging
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-sms}
+      PGUSER: ${POSTGRES_USER:-sms}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_TIME: ${BACKUP_TIME:-02:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      TZ: Africa/Casablanca
+    volumes:
+      - ./backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup.sh", "loop"]
+    networks: [internal]
+    logging: *logging
+
+volumes:
+  pgdata:
+  instance:
+  certbot-www:
+  letsencrypt:
+
+networks:
+  internal:
+    internal: true      # pas d'accès Internet direct pour la base
+  edge:

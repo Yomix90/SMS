@@ -1,0 +1,110 @@
+# Généré au démarrage du conteneur (envsubst) : ${DOMAIN} est remplacé par la valeur de .env.
+# Les variables Nginx ($host, $remote_addr…) ne sont pas touchées.
+
+# Limitation de débit par IP (complète les limites applicatives)
+limit_req_zone $binary_remote_addr zone=login:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+limit_req_zone $binary_remote_addr zone=device:10m rate=10r/s;
+limit_req_status 429;
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+upstream app {
+    server web:8000;
+}
+
+# --- HTTP : challenge Let's Encrypt + redirection HTTPS ---------------------------------
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+    server_tokens off;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# --- HTTPS ----------------------------------------------------------------------------------
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name ${DOMAIN};
+    server_tokens off;
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    include /etc/nginx/snippets/ssl.conf;
+    include /etc/nginx/snippets/security-headers.conf;
+
+    client_max_body_size 12m;          # imports Excel (10 Mo côté application)
+    proxy_connect_timeout 10s;
+    proxy_read_timeout 120s;           # exports PDF / gros imports (3600 s pour Socket.IO)
+
+    gzip on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+
+    # Socket.IO : téléphones (/device) et tableau de bord (/dashboard) — connexions longues
+    location /socket.io/ {
+        proxy_pass http://app;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        include /etc/nginx/snippets/proxy-headers.conf;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+        proxy_buffering off;
+    }
+
+    # API des téléphones (repli HTTP)
+    location /device/ {
+        limit_req zone=device burst=40 nodelay;
+        proxy_pass http://app;
+        include /etc/nginx/snippets/proxy-headers.conf;
+    }
+
+    # API REST
+    location /api/ {
+        limit_req zone=api burst=60 nodelay;
+        proxy_pass http://app;
+        include /etc/nginx/snippets/proxy-headers.conf;
+    }
+
+    location = /login {
+        limit_req zone=login burst=5 nodelay;
+        proxy_pass http://app;
+        include /etc/nginx/snippets/proxy-headers.conf;
+    }
+
+    # Fichiers statiques de l'application (cache navigateur)
+    location /static/ {
+        proxy_pass http://app;
+        include /etc/nginx/snippets/proxy-headers.conf;
+        expires 7d;
+        add_header Cache-Control "public";
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    # APK Android (déposer le fichier dans deploy/downloads/)
+    location /downloads/ {
+        alias /var/www/downloads/;
+        types { application/vnd.android.package-archive apk; }
+        default_type application/octet-stream;
+        add_header Content-Disposition "attachment";
+        include /etc/nginx/snippets/security-headers.conf;
+    }
+
+    location / {
+        proxy_pass http://app;
+        include /etc/nginx/snippets/proxy-headers.conf;
+    }
+}

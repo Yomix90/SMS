@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Déclencheur automatique") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.automations', tab='triggers') }}"><i class="bi bi-arrow-left"></i> {{ _("Automatisations") }}</a>
+{% set cfg = auto.config if auto else {} %}
+<form method="post" class="card mt-2" style="max-width:820px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-6"><label class="form-label">{{ _("Type") }}</label>
+        <select class="form-select" name="trigger" id="trigger">{% for t, l in trigger_labels.items() %}<option value="{{ t }}" {{ 'selected' if auto and auto.trigger == t }}>{{ _(l) }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="name" value="{{ auto.name if auto else '' }}" maxlength="150"></div>
+
+      <div class="col-md-6" data-trig="due_reminder"><label class="form-label">{{ _("Jours avant l'échéance") }}</label>
+        <input class="form-control" name="days_before" value="{{ cfg.get('days_before', [3, 1])|join(', ') }}" placeholder="3, 1"><div class="form-text">{{ _("Ex. 3, 1 : un rappel à J-3 et un à J-1.") }}</div></div>
+      <div class="col-md-4" data-trig="unpaid_followup"><label class="form-label">{{ _("Jours après l'échéance") }}</label>
+        <input class="form-control" name="days_after" value="{{ cfg.get('days_after', [1, 7, 15])|join(', ') }}"></div>
+      <div class="col-md-2" data-trig="unpaid_followup"><label class="form-label">{{ _("Max relances") }}</label>
+        <input class="form-control" type="number" name="max" min="1" max="20" value="{{ cfg.get('max', 3) }}"></div>
+      <div class="col-md-6" data-trig="welcome"><label class="form-label">{{ _("Contacts ajoutés au groupe") }}</label>
+        <select class="form-select" name="welcome_group"><option value="">{{ _("Tout nouveau contact") }}</option>
+          {% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if cfg.get('group_id') == g.id }}>{{ g.name }}</option>{% endfor %}</select></div>
+
+      <div class="col-md-6"><label class="form-label">{{ _("Heure d'envoi") }}</label>
+        <input class="form-control" type="time" name="run_time" value="{{ auto.run_time.strftime('%H:%M') if auto else '10:00' }}"></div>
+      <div class="col-md-6"><label class="form-label">{{ _("Modèle français") }}</label>
+        <select class="form-select" name="template_fr_id"><option value="">—</option>{% for t in templates if t.language == 'fr' %}<option value="{{ t.uuid }}" {{ 'selected' if auto and auto.template_fr_id == t.id }}>{{ t.name }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">{{ _("Modèle arabe") }}</label>
+        <select class="form-select" name="template_ar_id"><option value="">—</option>{% for t in templates if t.language == 'ar' %}<option value="{{ t.uuid }}" {{ 'selected' if auto and auto.template_ar_id == t.id }}>{{ t.name }}</option>{% endfor %}</select>
+        <div class="form-text">{{ _("Le modèle est choisi selon la langue du contact.") }}</div></div>
+      <div class="col-12"><label class="form-label">{{ _("Limiter aux groupes (facultatif)") }}</label>
+        <div class="d-flex flex-wrap gap-2">{% for g in groups %}<input type="checkbox" class="btn-check" name="groups" value="{{ g.id }}" id="ag{{ g.id }}" {{ 'checked' if auto and g.id in (auto.audience.get('groups') or []) }}>
+          <label class="btn btn-sm btn-outline-primary" for="ag{{ g.id }}">{{ g.name }}</label>{% endfor %}</div></div>
+      <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" id="aactive" {{ 'checked' if not auto or auto.is_active }}><label class="form-check-label" for="aactive">{{ _("Actif") }}</label></div></div>
+    </div>
+    <div class="alert alert-light border small mt-3 mb-0">{{ _("Les échéances proviennent des fiches contacts ou des imports Excel (colonnes Montant, Date échéance, Référence). Les contacts désinscrits sont exclus.") }}</div>
+  </div>
+  <div class="card-footer bg-transparent"><button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var sel = document.getElementById("trigger");
+  function upd() { document.querySelectorAll("[data-trig]").forEach(function (el) { el.hidden = el.dataset.trig !== sel.value; }); }
+  sel.addEventListener("change", upd); upd();
+})();
+</script>
+{% endblock %}

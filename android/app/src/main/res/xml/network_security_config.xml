@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HTTPS est utilisé en production (Let's Encrypt). Le HTTP clair reste autorisé pour
+  tester sur le réseau local (ex. http://192.168.1.10:5000) ; l'application affiche
+  un avertissement quand le serveur appairé n'est pas en HTTPS.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,0 +1,9 @@
+﻿Nom;Prénom;Téléphone;Montant;Date échéance;Référence;Ville;Langue;Message
+Alaoui;Salma;0612345678;1250.5;26/10/2026;FAC-2026-001;Casablanca;fr;
+Bennani;Youssef;06 61 23 45 67;800;28/10/2026;FAC-2026-002;Rabat;fr;
+El Idrissi;Fatima;+212700112233;450;24/10/2026;FAC-2026-003;Fès;ar;مرحبا {prenom}، نذكركم بأن مبلغ {montant} درهم يحل أجله في {date_echeance}.
+Tazi;Omar;0655443322;2300;17/10/2026;FAC-2026-004;Marrakech;fr;Bonjour {prenom}, votre facture {reference} de {montant} MAD est échue depuis le {date_echeance}. Merci de régulariser.
+Chraibi;Nadia;212661112233;990;31/10/2026;FAC-2026-005;Tanger;fr;
+Doublon;Test;06.12.34.56.78;100;21/10/2026;FAC-2026-006;Casablanca;fr;
+Fixe;Test;0522123456;100;21/10/2026;FAC-2026-007;Casablanca;fr;
+Invalide;Test;12345;100;21/10/2026;FAC-2026-008;Agadir;fr;

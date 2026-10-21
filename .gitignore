@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+backend/instance/
+*.db
+*.db-*
+
+# Secrets
+.env
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.keystore
+*.jks
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Déploiement
+deploy/.env
+deploy/backups/
+deploy/downloads/*.apk
+android/keystore.properties
+
+# Divers
+android/.kotlin/
+.claude/
+*.log

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button, empty_state %}
+{% block title %}{{ _("Modèles de messages") }}{% endblock %}
+{% block content %}
+<div class="toolbar">
+  <form method="get" class="d-flex gap-2">
+    <select class="form-select form-select-sm" name="category" data-autosubmit>
+      <option value="">{{ _("Toutes les catégories") }}</option>
+      {% for c in categories %}<option value="{{ c }}" {{ 'selected' if request.args.get('category') == c }}>{{ _(labels[c]) }}</option>{% endfor %}
+    </select>
+    <select class="form-select form-select-sm" name="language" data-autosubmit>
+      <option value="">{{ _("FR et AR") }}</option>
+      <option value="fr" {{ 'selected' if request.args.get('language') == 'fr' }}>Français</option>
+      <option value="ar" {{ 'selected' if request.args.get('language') == 'ar' }}>العربية</option>
+    </select>
+  </form>
+  <a class="btn btn-primary ms-auto" href="{{ url_for('web.template_edit') }}"><i class="bi bi-plus-lg"></i> {{ _("Nouveau modèle") }}</a>
+</div>
+{% if items %}
+<div class="row g-3">
+  {% for t in items %}
+  <div class="col-md-6 col-xxl-4">
+    <div class="card h-100 {{ 'opacity-50' if not t.is_active }}">
+      <div class="card-header">
+        <span class="badge text-bg-{{ 'success' if t.language == 'ar' else 'primary' }}">{{ t.language|upper }}</span>
+        <span class="text-truncate">{{ t.name }}</span>
+        <div class="actions"><span class="badge text-bg-light border">{{ _(labels.get(t.category, t.category)) }}</span></div>
+      </div>
+      <div class="card-body">
+        <div class="bubble out mb-2" dir="auto" style="max-width:100%">{{ t.body }}</div>
+        {% if t.variables %}<div class="var-buttons">{% for v in t.variables %}<code class="small">{{ '{' ~ v ~ '}' }}</code>{% endfor %}</div>{% endif %}
+      </div>
+      <div class="card-footer bg-transparent d-flex gap-2">
+        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('web.campaign_new', template=t.uuid) }}"><i class="bi bi-megaphone"></i> {{ _("Utiliser") }}</a>
+        <a class="btn btn-sm btn-light" href="{{ url_for('web.template_edit', uid=t.uuid) }}"><i class="bi bi-pencil"></i> {{ _("Modifier") }}</a>
+        <span class="ms-auto">{{ post_button(url_for('web.template_delete', uid=t.uuid), None, "trash", "btn-sm btn-outline-danger", confirm=True, title=_("Supprimer")) }}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">{% call empty_state("file-text", _("Aucun modèle"), _("Enregistrez vos messages fréquents (rappels, relances, promotions) en français et en arabe.")) %}
+  <a class="btn btn-primary mt-2" href="{{ url_for('web.template_edit') }}">{{ _("Créer un modèle") }}</a>{% endcall %}</div>
+{% endif %}
+{% endblock %}

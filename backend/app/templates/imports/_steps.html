@@ -1,0 +1,7 @@
+<div class="wizard-steps">
+  {% set labels = [_("1. Fichier"), _("2. Colonnes et message"), _("3. Contrôle et envoi")] %}
+  {% for label in labels %}
+  <span class="step {{ 'done' if loop.index < step else ('current' if loop.index == step else '') }}">
+    {% if loop.index < step %}<i class="bi bi-check-circle-fill"></i>{% endif %}{{ label }}</span>
+  {% endfor %}
+</div>

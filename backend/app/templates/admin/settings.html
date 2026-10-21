@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Paramètres") }}{% endblock %}
+{% block content %}
+{% set w = s.send_window %}
+<form method="post" class="row g-4" style="max-width:1100px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-header"><i class="bi bi-moon-stars"></i>{{ _("Fenêtre horaire d'envoi") }}</div><div class="card-body">
+      <div class="form-check form-switch mb-3"><input class="form-check-input" type="checkbox" name="window_enabled" id="we" {{ 'checked' if w.get('enabled', True) }}><label class="form-check-label" for="we">{{ _("Pas d'envoi en dehors de cette plage") }}</label></div>
+      <div class="row g-2 mb-3">
+        <div class="col-6"><label class="form-label">{{ _("De") }}</label><input class="form-control" type="time" name="window_start" value="{{ w.get('start', '08:00') }}"></div>
+        <div class="col-6"><label class="form-label">{{ _("À") }}</label><input class="form-control" type="time" name="window_end" value="{{ w.get('end', '21:00') }}"></div>
+      </div>
+      <label class="form-label">{{ _("Jours autorisés") }}</label>
+      <div class="d-flex flex-wrap gap-1">{% for d, l in [(1, "Lun"), (2, "Mar"), (3, "Mer"), (4, "Jeu"), (5, "Ven"), (6, "Sam"), (7, "Dim")] %}
+        <input type="checkbox" class="btn-check" name="window_days" value="{{ d }}" id="wd{{ d }}" {{ 'checked' if d in w.get('days', [1,2,3,4,5,6,7]) }}><label class="btn btn-sm btn-outline-primary" for="wd{{ d }}">{{ _(l) }}</label>{% endfor %}</div>
+      <div class="form-text mt-2">{{ _("Fuseau Africa/Casablanca. Les messages hors plage attendent l'ouverture suivante ; seules les clés API autorisées et les réponses aux SMS reçus passent outre.") }}</div>
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-header"><i class="bi bi-arrow-repeat"></i>{{ _("Relances et anti-abus") }}</div><div class="card-body">
+      <div class="row g-2 mb-3">
+        <div class="col-6"><label class="form-label">{{ _("Tentatives max") }}</label><input class="form-control" type="number" name="max_attempts" min="1" max="10" value="{{ s.max_attempts }}"></div>
+        <div class="col-6"><label class="form-label">{{ _("Délais entre tentatives (min)") }}</label><input class="form-control" name="retry_backoff" value="{% for b in s.retry_backoff %}{{ b // 60 }}{{ ',' if not loop.last }}{% endfor %}"></div>
+      </div>
+      <div class="form-text mb-3">{{ _("Les échecs temporaires (pas de réseau, radio coupée…) sont relancés automatiquement, au besoin sur un autre téléphone.") }}</div>
+      <label class="form-label">{{ _("Seuil d'envoi massif suspect") }}</label>
+      <div class="input-group mb-1"><input class="form-control" type="number" name="abuse_count" value="{{ s.abuse_threshold.count }}" min="10"><span class="input-group-text">{{ _("SMS en") }}</span>
+        <input class="form-control" type="number" name="abuse_minutes" value="{{ s.abuse_threshold.minutes }}" min="1"><span class="input-group-text">min</span></div>
+      <div class="form-text mb-3">{{ _("Au-delà, les envois d'une clé API ou d'un opérateur sont bloqués et les administrateurs alertés.") }}</div>
+      <label class="form-label">{{ _("Nom de l'entreprise") }}</label><input class="form-control" name="company_name" value="{{ s.company_name or '' }}">
+    </div></div>
+  </div>
+  <div class="col-12">
+    <div class="card"><div class="card-header"><i class="bi bi-slash-circle"></i>{{ _("Désinscription (STOP) — loi 09-08") }}</div><div class="card-body">
+      <div class="mb-3"><label class="form-label">{{ _("Mots-clés de désinscription") }}</label><input class="form-control" name="stop_keywords" value="{{ s.stop_keywords|join(', ') }}">
+        <div class="form-text">{{ _("Un SMS reçu contenant uniquement l'un de ces mots désinscrit l'expéditeur.") }}</div></div>
+      <div class="row g-3">
+        <div class="col-md-6"><label class="form-label">{{ _("Mention ajoutée aux campagnes (FR)") }}</label><input class="form-control" name="stop_footer_fr" value="{{ s.stop_footer.fr }}"></div>
+        <div class="col-md-6"><label class="form-label">{{ _("Mention ajoutée aux campagnes (AR)") }}</label><input class="form-control" name="stop_footer_ar" value="{{ s.stop_footer.ar }}" dir="rtl"></div>
+        <div class="col-md-6"><label class="form-label">{{ _("Confirmation envoyée (FR)") }}</label><input class="form-control" name="stop_reply_fr" value="{{ s.stop_reply.fr }}"></div>
+        <div class="col-md-6"><label class="form-label">{{ _("Confirmation envoyée (AR)") }}</label><input class="form-control" name="stop_reply_ar" value="{{ s.stop_reply.ar }}" dir="rtl"></div>
+      </div>
+      <div class="form-text">{{ _("{numero} est remplacé par « ce numéro ».") }}</div>
+      <div class="form-check form-switch mt-2"><input class="form-check-input" type="checkbox" name="stop_reply_enabled" id="sre" {{ 'checked' if s.stop_reply_enabled }}><label class="form-check-label" for="sre">{{ _("Envoyer une confirmation de désinscription") }}</label></div>
+    </div></div>
+  </div>
+  <div class="col-12"><button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button></div>
+</form>
+{% endblock %}

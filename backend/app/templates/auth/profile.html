@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Mon profil") }}{% endblock %}
+{% block content %}
+<form method="post" class="row g-4" style="max-width:900px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-person"></i>{{ _("Informations") }}</div>
+      <div class="card-body">
+        <div class="mb-3"><label class="form-label">{{ _("Email") }}</label>
+          <input class="form-control" value="{{ current_user.email }}" disabled dir="ltr"></div>
+        <div class="mb-3"><label class="form-label">{{ _("Nom complet") }}</label>
+          <input class="form-control" name="full_name" value="{{ current_user.full_name or '' }}"></div>
+        <div class="mb-3"><label class="form-label">{{ _("Langue de l'interface") }}</label>
+          <select class="form-select" name="locale">
+            <option value="fr" {{ 'selected' if current_user.locale == 'fr' }}>Français</option>
+            <option value="ar" {{ 'selected' if current_user.locale == 'ar' }}>العربية</option>
+          </select></div>
+        <div><label class="form-label">{{ _("Thème") }}</label>
+          <select class="form-select" name="theme">
+            <option value="auto" {{ 'selected' if current_user.theme == 'auto' }}>{{ _("Automatique (système)") }}</option>
+            <option value="light" {{ 'selected' if current_user.theme == 'light' }}>{{ _("Clair") }}</option>
+            <option value="dark" {{ 'selected' if current_user.theme == 'dark' }}>{{ _("Sombre") }}</option>
+          </select></div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-lock"></i>{{ _("Changer le mot de passe") }}</div>
+      <div class="card-body">
+        <div class="mb-3"><label class="form-label">{{ _("Mot de passe actuel") }}</label>
+          <input class="form-control" type="password" name="current_password" autocomplete="current-password"></div>
+        <div class="mb-3"><label class="form-label">{{ _("Nouveau mot de passe") }}</label>
+          <input class="form-control" type="password" name="new_password" autocomplete="new-password" minlength="10"></div>
+        <div class="mb-1"><label class="form-label">{{ _("Confirmation") }}</label>
+          <input class="form-control" type="password" name="confirm_password" autocomplete="new-password"></div>
+        <div class="form-text">{{ _("10 caractères minimum, avec majuscules, minuscules et chiffres.") }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-12"><button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button></div>
+</form>
+{% endblock %}

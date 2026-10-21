@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button %}
+{% block title %}{{ _("Détail du message") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.messages') }}"><i class="bi bi-arrow-left"></i> {{ _("Historique") }}</a>
+<div class="row g-4 mt-1">
+  <div class="col-lg-7">
+    <div class="card mb-4" data-message-id="{{ m.uuid }}">
+      <div class="card-header">
+        <i class="bi bi-{{ 'arrow-up-right' if m.direction == 'out' else 'arrow-down-left' }}"></i>
+        <span class="phone">{{ m.phone|phone }}</span>
+        <span class="status-cell">{{ status_badge(m.status) }}</span>
+        <div class="actions">
+          {% if m.direction == 'out' and m.status in ('scheduled', 'queued', 'paused', 'dispatched') %}
+            {{ post_button(url_for('web.message_cancel', uid=m.uuid), _("Annuler"), "x-circle", "btn-outline-danger btn-sm", confirm=True) }}
+          {% endif %}
+          {% if m.direction == 'out' and m.status in ('failed', 'canceled') %}
+            {{ post_button(url_for('web.message_retry', uid=m.uuid), _("Relancer"), "arrow-repeat", "btn-outline-primary btn-sm") }}
+          {% endif %}
+          <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.inbox', c=m.conversation_id) }}"><i class="bi bi-chat-dots"></i> {{ _("Conversation") }}</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="bubble {{ m.direction }} mb-3" dir="auto">{{ m.body }}</div>
+        {% if m.error_code %}<div class="alert alert-danger py-2 small mb-0"><strong>{{ m.error_code }}</strong> {{ m.error_message or "" }}</div>{% endif %}
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-list-check"></i>{{ _("Historique des statuts") }}</div>
+      <ul class="list-group list-group-flush">
+        {% for e in m.events %}
+        <li class="list-group-item d-flex gap-3 align-items-center">
+          {{ status_badge(e.status) }}
+          <span class="small">{% if e.error_code %}<span class="text-danger">{{ e.error_code }}</span>{% endif %}
+            {% if e.details %}<span class="text-body-secondary">{% for k, v in e.details.items() if v is not none %}{{ k }}: {{ v }}{{ ", " if not loop.last }}{% endfor %}</span>{% endif %}</span>
+          <span class="ms-auto small text-body-secondary text-nowrap">{{ e.created_at|dt("%d/%m/%Y %H:%M:%S") }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle"></i>{{ _("Informations") }}</div>
+      <ul class="list-group list-group-flush small">
+        {% macro row(label, value) %}<li class="list-group-item d-flex justify-content-between gap-3"><span class="text-body-secondary">{{ label }}</span><span class="text-end">{{ value }}</span></li>{% endmacro %}
+        {{ row(_("Identifiant"), m.uuid) }}
+        {% if m.contact %}{{ row(_("Contact"), m.contact.full_name or "—") }}{% endif %}
+        {{ row(_("Encodage"), _("Unicode (arabe/emoji)") if m.encoding == "ucs2" else _("Standard GSM")) }}
+        {{ row(_("Segments"), m.segments) }}
+        {{ row(_("Source"), source_label(m.source)) }}
+        {% if m.campaign %}<li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Campagne") }}</span><a href="{{ url_for('web.campaign_detail', uid=m.campaign.uuid) }}">{{ m.campaign.name }}</a></li>{% endif %}
+        {{ row(_("Appareil"), (m.device.name if m.device else "—") ~ (" · SIM " ~ (m.sim_slot + 1) if m.sim_slot is not none else "")) }}
+        {% if m.direction == 'out' %}
+        {{ row(_("Tentatives"), m.attempts ~ " / " ~ m.max_attempts) }}
+        {{ row(_("Créé le"), m.created_at|dt) }}
+        {% if m.scheduled_at %}{{ row(_("Programmé pour"), m.scheduled_at|dt) }}{% endif %}
+        {% if m.sent_at %}{{ row(_("Envoyé le"), m.sent_at|dt) }}{% endif %}
+        {% if m.delivered_at %}{{ row(_("Livré le"), m.delivered_at|dt) }}{% endif %}
+        {% else %}
+        {{ row(_("Reçu le"), m.received_at|dt) }}
+        {% endif %}
+        {% if m.external_ref %}{{ row(_("Référence externe"), m.external_ref) }}{% endif %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

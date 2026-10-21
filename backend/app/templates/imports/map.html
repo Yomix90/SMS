@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea %}
+{% block title %}{{ _("Import : colonnes et message") }}{% endblock %}
+{% block content %}
+{% set step = 2 %}{% include "imports/_steps.html" %}
+<form method="post" class="row g-4">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-table"></i>{{ imp.original_filename }}
+        <span class="badge text-bg-light border">{{ imp.total_rows }} {{ _("lignes") }}</span>
+        {% if imp.header_row > 1 %}<span class="small text-body-secondary">{{ _("en-tête détecté ligne {n}", n=imp.header_row) }}</span>{% endif %}</div>
+      <div class="table-responsive">
+        <table class="table align-middle mapping-table small">
+          <thead><tr><th>{{ _("Colonne du fichier") }}</th><th>{{ _("Utiliser comme") }}</th><th>{{ _("Aperçu des valeurs") }}</th></tr></thead>
+          <tbody>
+          {% for col in imp.columns %}
+            {% set i = loop.index0 %}{% set current = mapping.get(col, "") %}
+            {% set is_var = current not in ("phone", "message", "") %}
+            <tr>
+              <td class="fw-semibold">{{ col }}</td>
+              <td>
+                <div class="d-flex gap-2">
+                  <select class="form-select form-select-sm" name="map_{{ i }}" data-map-select="{{ i }}">
+                    <option value="phone" {{ 'selected' if current == 'phone' }}>📱 {{ _("Numéro de téléphone") }}</option>
+                    <option value="message" {{ 'selected' if current == 'message' }}>💬 {{ _("Message de la ligne") }}</option>
+                    <option value="__var__" {{ 'selected' if is_var }}>{ } {{ _("Variable") }}</option>
+                    <option value="" {{ 'selected' if current == '' }}>{{ _("Ignorer") }}</option>
+                  </select>
+                  <input class="form-control form-control-sm font-monospace" name="var_{{ i }}" value="{{ current if is_var else '' }}" placeholder="{{ col }}" data-var-input="{{ i }}" {{ '' if is_var else 'hidden' }} style="max-width:200px" dir="ltr">
+                </div>
+              </td>
+              <td>{% for row in sample %}<div class="sample-cell" dir="auto">{{ row.get(col) if row.get(col) is not none else "—" }}</div>{% endfor %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="card-body pt-0">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="dedupe" id="dedupe" checked>
+          <label class="form-check-label" for="dedupe">{{ _("Ignorer les numéros en double (garder la première ligne)") }}</label>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-chat-text"></i>{{ _("Texte commun") }}
+        <div class="actions">
+          <select class="form-select form-select-sm" id="tpl-picker">
+            <option value="">{{ _("Insérer un modèle…") }}</option>
+            {% for t in templates %}<option data-body="{{ t.body }}">{{ t.name }} ({{ t.language|upper }})</option>{% endfor %}
+          </select>
+        </div></div>
+      <div class="card-body">
+        <div class="var-buttons mb-2" id="var-buttons"></div>
+        {{ sms_textarea(value=body, rows=5, required=False, placeholder=_("Bonjour {prenom}, votre échéance de {montant} MAD est due le {date_echeance}.")) }}
+        <div class="form-text">{{ _("Facultatif si une colonne « Message de la ligne » est définie : elle est prioritaire quand elle est remplie.") }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4 d-flex align-items-end">
+    <button class="btn btn-primary btn-lg w-100" type="submit"><i class="bi bi-shield-check"></i> {{ _("Vérifier les données") }}</button>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var box = document.getElementById("var-buttons"), cols = {{ imp.columns|tojson }};
+  function varName(i) {
+    var input = document.querySelector('[data-var-input="' + i + '"]');
+    return (input.value || input.placeholder).trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/[^\w؀-ۿ]+/g, "_").replace(/^_|_$/g, "");
+  }
+  function refresh() {
+    box.innerHTML = "";
+    document.querySelectorAll("[data-map-select]").forEach(function (sel) {
+      var i = sel.dataset.mapSelect, input = document.querySelector('[data-var-input="' + i + '"]');
+      input.hidden = sel.value !== "__var__";
+      if (sel.value === "__var__") {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "btn btn-sm btn-outline-primary"; b.dataset.insertVar = varName(i);
+        b.textContent = "{" + varName(i) + "}";
+        box.appendChild(b);
+      }
+    });
+  }
+  document.addEventListener("change", function (e) { if (e.target.matches("[data-map-select]")) refresh(); });
+  document.addEventListener("input", function (e) { if (e.target.matches("[data-var-input]")) refresh(); });
+  refresh();
+  var picker = document.getElementById("tpl-picker"), body = document.getElementById("body");
+  picker.addEventListener("change", function () {
+    var o = picker.selectedOptions[0];
+    if (o && o.dataset.body) { body.value = o.dataset.body; body.dispatchEvent(new Event("input")); }
+    picker.value = "";
+  });
+})();
+</script>
+{% endblock %}

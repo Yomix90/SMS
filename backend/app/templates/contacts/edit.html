@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button %}
+{% block title %}{{ (contact.full_name or contact.phone|phone) if contact else _("Nouveau contact") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.contacts') }}"><i class="bi bi-arrow-left"></i> {{ _("Contacts") }}</a>
+{% set sel_groups = form.getlist('groups')|map('int')|list if form.getlist is defined else (form.groups or []) %}
+<div class="row g-4 mt-1">
+  <div class="col-xl-7">
+    <form method="post" class="card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-person"></i>{{ _("Fiche contact") }}
+        {% if contact and blacklisted %}<span class="badge text-bg-danger">{{ _("Liste noire") }}</span>{% endif %}</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6"><label class="form-label">{{ _("Prénom") }}</label><input class="form-control" name="first_name" value="{{ form.first_name or '' }}" maxlength="80"></div>
+          <div class="col-md-6"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="last_name" value="{{ form.last_name or '' }}" maxlength="80"></div>
+          <div class="col-md-6"><label class="form-label">{{ _("Téléphone") }}</label><input class="form-control" name="phone" value="{{ form.phone or '' }}" required dir="ltr"></div>
+          <div class="col-md-6"><label class="form-label">{{ _("Email") }}</label><input class="form-control" type="email" name="email" value="{{ form.email or '' }}" dir="ltr"></div>
+          <div class="col-md-4"><label class="form-label">{{ _("Date de naissance") }}</label><input class="form-control" type="date" name="birthday" value="{{ form.birthday or '' }}"></div>
+          <div class="col-md-4"><label class="form-label">{{ _("Langue des SMS") }}</label>
+            <select class="form-select" name="locale"><option value="fr" {{ 'selected' if form.locale == 'fr' }}>Français</option><option value="ar" {{ 'selected' if form.locale == 'ar' }}>العربية</option></select></div>
+          <div class="col-md-4"><label class="form-label">{{ _("Consentement") }}</label>
+            <select class="form-select" name="consent_status">
+              <option value="unknown" {{ 'selected' if form.consent_status == 'unknown' }}>{{ _("Non renseigné") }}</option>
+              <option value="opt_in" {{ 'selected' if form.consent_status == 'opt_in' }}>{{ _("Consentement donné") }}</option>
+              <option value="opted_out" {{ 'selected' if form.consent_status == 'opted_out' }}>{{ _("Désinscrit") }}</option>
+            </select>
+            {% if contact and contact.consent_at %}<div class="form-text">{{ _("Depuis le") }} {{ contact.consent_at|dt }} ({{ contact.consent_source }})</div>{% endif %}</div>
+          <div class="col-12"><label class="form-label">{{ _("Groupes") }}</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for g in groups %}
+              <input type="checkbox" class="btn-check" name="groups" value="{{ g.id }}" id="cg{{ g.id }}" {{ 'checked' if g.id in sel_groups }}>
+              <label class="btn btn-sm btn-outline-primary" for="cg{{ g.id }}">{{ g.name }}</label>
+              {% else %}<span class="small text-body-secondary">{{ _("Aucun groupe.") }}</span>{% endfor %}
+            </div></div>
+          <div class="col-12"><label class="form-label">{{ _("Champs personnalisés") }}</label>
+            <textarea class="form-control font-monospace small" name="custom_fields" rows="3" placeholder="ville=Casablanca&#10;agence=Maarif" dir="auto">{{ form.custom_fields or '' }}</textarea>
+            <div class="form-text">{{ _("Une ligne par champ, au format clé=valeur. Utilisables comme variables : {ville}.") }}</div></div>
+          <div class="col-12"><label class="form-label">{{ _("Notes") }}</label><textarea class="form-control" name="notes" rows="2">{{ form.notes or '' }}</textarea></div>
+        </div>
+      </div>
+      <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button>
+        {% if contact %}
+        <a class="btn btn-outline-primary" href="{{ url_for('web.send', phone=contact.phone) }}"><i class="bi bi-send"></i> {{ _("Envoyer un SMS") }}</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  {% if contact %}
+  <div class="col-xl-5">
+    <div class="card mb-4" id="receivables">
+      <div class="card-header"><i class="bi bi-cash-coin"></i>{{ _("Échéances") }}</div>
+      <ul class="list-group list-group-flush">
+        {% for r in contact.receivables|sort(attribute="due_date") %}
+        <li class="list-group-item d-flex align-items-center gap-2 small">
+          <div class="flex-grow-1">
+            <div class="fw-semibold">{{ r.reference }} · {{ "%.2f"|format(r.amount) }} {{ r.currency }}</div>
+            <div class="{{ 'text-danger' if r.status == 'unpaid' and r.due_date < today else 'text-body-secondary' }}">{{ _("Échéance") }} {{ r.due_date.strftime("%d/%m/%Y") }}</div>
+          </div>
+          {% if r.status == 'paid' %}<span class="badge text-bg-success">{{ _("Payée") }}</span>
+            {{ post_button(url_for('web.receivable_action', rid=r.id, action='unpaid'), None, "arrow-counterclockwise", "btn-sm btn-light", title=_("Marquer impayée")) }}
+          {% else %}<span class="badge text-bg-warning">{{ _("Impayée") }}</span>
+            {{ post_button(url_for('web.receivable_action', rid=r.id, action='paid'), None, "check2", "btn-sm btn-outline-success", title=_("Marquer payée")) }}{% endif %}
+          {{ post_button(url_for('web.receivable_action', rid=r.id, action='delete'), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}
+        </li>
+        {% else %}<li class="list-group-item small text-body-secondary">{{ _("Aucune échéance.") }}</li>{% endfor %}
+      </ul>
+      <form method="post" action="{{ url_for('web.receivable_add', uid=contact.uuid) }}" class="card-body border-top">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-2">
+          <div class="col-4"><input class="form-control form-control-sm" name="reference" placeholder="{{ _('Référence') }}" required></div>
+          <div class="col-3"><input class="form-control form-control-sm" name="amount" placeholder="{{ _('Montant') }}" required inputmode="decimal"></div>
+          <div class="col-3"><input class="form-control form-control-sm" type="date" name="due_date" required></div>
+          <div class="col-2"><button class="btn btn-sm btn-primary w-100" type="submit"><i class="bi bi-plus"></i></button></div>
+        </div>
+      </form>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-chat-dots"></i>{{ _("Derniers échanges") }}
+        <div class="actions"><a class="btn btn-sm btn-light" href="{{ url_for('web.messages', phone=contact.phone) }}">{{ _("Tout voir") }}</a></div></div>
+      <ul class="list-group list-group-flush">
+        {% for m in messages %}
+        <li class="list-group-item small d-flex gap-2"><i class="bi bi-{{ 'arrow-up-right text-primary' if m.direction == 'out' else 'arrow-down-left text-success' }}"></i>
+          <div class="msg-preview flex-grow-1" dir="auto">{{ m.body }}</div>{{ status_badge(m.status) }}</li>
+        {% else %}<li class="list-group-item small text-body-secondary">{{ _("Aucun message.") }}</li>{% endfor %}
+      </ul>
+    </div>
+
+    <div class="card border-danger-subtle">
+      <div class="card-header"><i class="bi bi-shield-lock"></i>{{ _("Données personnelles (loi 09-08)") }}</div>
+      <div class="card-body d-flex flex-wrap gap-2">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.contact_export', uid=contact.uuid) }}"><i class="bi bi-filetype-json"></i> {{ _("Exporter ses données") }}</a>
+        {{ post_button(url_for('web.contact_delete', uid=contact.uuid), _("Effacer le contact et ses messages"), "trash", "btn-sm btn-outline-danger", confirm=_("Supprimer définitivement ce contact, ses échéances et l'historique de ses messages ?")) }}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

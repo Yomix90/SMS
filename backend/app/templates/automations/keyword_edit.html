@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea %}
+{% block title %}{{ _("Réponse automatique") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.automations', tab='keywords') }}"><i class="bi bi-arrow-left"></i> {{ _("Automatisations") }}</a>
+<form method="post" class="card mt-2" style="max-width:820px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-8"><label class="form-label">{{ _("Mots-clés") }}</label>
+        <input class="form-control" name="keywords" value="{{ rule.keywords|join(', ') if rule else '' }}" required placeholder="INFO, PRIX, معلومات">
+        <div class="form-text">{{ _("Séparés par des virgules. Majuscules et accents ignorés.") }}</div></div>
+      <div class="col-md-4"><label class="form-label">{{ _("Condition") }}</label>
+        <select class="form-select" name="match_type">{% for k, l in match_labels.items() %}<option value="{{ k }}" {{ 'selected' if rule and rule.match_type == k }}>{{ _(l) }}</option>{% endfor %}</select></div>
+      <div class="col-md-6"><label class="form-label">{{ _("Action") }}</label>
+        <select class="form-select" name="action" id="kw-action">{% for k, l in action_labels.items() %}<option value="{{ k }}" {{ 'selected' if rule and rule.action == k }}>{{ _(l) }}</option>{% endfor %}</select></div>
+      <div class="col-md-6" id="kw-value"><label class="form-label">{{ _("Étiquette ou groupe") }}</label>
+        <input class="form-control" name="action_value" value="{{ rule.action_value or '' if rule else '' }}" list="kw-groups">
+        <datalist id="kw-groups">{% for g in groups %}<option value="{{ g.name }}">{% endfor %}</datalist></div>
+      <div class="col-12"><label class="form-label">{{ _("Texte de la réponse") }}</label>
+        {{ sms_textarea(name="reply_body", id="reply_body", value=(rule.reply_body or "") if rule else "", rows=4, required=False, variables=["prenom", "nom"]) }}</div>
+      <div class="col-md-4"><label class="form-label">{{ _("Priorité") }}</label><input class="form-control" type="number" name="priority" value="{{ rule.priority if rule else 0 }}">
+        <div class="form-text">{{ _("La règle la plus prioritaire s'applique.") }}</div></div>
+      <div class="col-md-4"><label class="form-label">{{ _("Anti-répétition (minutes)") }}</label><input class="form-control" type="number" name="cooldown_minutes" min="0" value="{{ rule.cooldown_minutes if rule else 60 }}">
+        <div class="form-text">{{ _("Pas plus d'une réponse automatique par numéro pendant ce délai.") }}</div></div>
+      <div class="col-md-4 d-flex align-items-center"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" id="kactive" {{ 'checked' if not rule or rule.is_active }}><label class="form-check-label" for="kactive">{{ _("Actif") }}</label></div></div>
+    </div>
+  </div>
+  <div class="card-footer bg-transparent"><button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var a = document.getElementById("kw-action"), v = document.getElementById("kw-value");
+  function upd() { v.hidden = ["label", "add_group"].indexOf(a.value) === -1; }
+  a.addEventListener("change", upd); upd();
+})();
+</script>
+{% endblock %}

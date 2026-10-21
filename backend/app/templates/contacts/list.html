@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination, empty_state %}
+{% block title %}{{ _("Contacts") }}{% endblock %}
+{% block content %}
+{% set a = request.args %}
+<div class="toolbar">
+  <form method="get" class="d-flex flex-wrap gap-2">
+    <input class="form-control form-control-sm" name="q" value="{{ a.get('q', '') }}" placeholder="{{ _('Nom, numéro, email…') }}" style="min-width:220px">
+    <select class="form-select form-select-sm" name="group" data-autosubmit>
+      <option value="">{{ _("Tous les groupes") }}</option>
+      {% for g in groups %}<option value="{{ g.id }}" {{ 'selected' if a.get('group') == g.id|string }}>{{ g.name }}</option>{% endfor %}
+    </select>
+    <select class="form-select form-select-sm" name="consent" data-autosubmit>
+      <option value="">{{ _("Tout consentement") }}</option>
+      <option value="opt_in" {{ 'selected' if a.get('consent') == 'opt_in' }}>{{ _("Consentement donné") }}</option>
+      <option value="unknown" {{ 'selected' if a.get('consent') == 'unknown' }}>{{ _("Non renseigné") }}</option>
+      <option value="opted_out" {{ 'selected' if a.get('consent') == 'opted_out' }}>{{ _("Désinscrit") }}</option>
+    </select>
+    <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>
+  </form>
+  <div class="ms-auto d-flex gap-2">
+    <a class="btn btn-sm btn-outline-success" href="{{ url_for('web.contacts', **dict(a.to_dict(), export='xlsx')) }}"><i class="bi bi-download"></i> {{ _("Exporter") }}</a>
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('web.imports') }}"><i class="bi bi-upload"></i> {{ _("Importer") }}</a>
+    <a class="btn btn-sm btn-primary" href="{{ url_for('web.contact_new') }}"><i class="bi bi-person-plus"></i> {{ _("Nouveau contact") }}</a>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('web.contacts_bulk') }}" class="card" id="bulk-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if page.items %}
+  <div class="card-header small fw-normal">
+    <span class="text-body-secondary">{{ _("{n} contacts", n=page.total) }}</span>
+    <div class="actions">
+      <select class="form-select form-select-sm" name="group_id"><option value="">{{ _("Groupe…") }}</option>{% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select>
+      <button class="btn btn-sm btn-light text-nowrap" name="action" value="add_group">{{ _("Ajouter au groupe") }}</button>
+      <button class="btn btn-sm btn-light text-nowrap" name="action" value="remove_group">{{ _("Retirer du groupe") }}</button>
+      {% if current_user.is_admin %}<button class="btn btn-sm btn-outline-danger" name="action" value="delete" onclick="return confirm(APP.i18n.confirm)"><i class="bi bi-trash"></i></button>{% endif %}
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr><th style="width:1%"><input class="form-check-input" type="checkbox" id="check-all"></th>
+        <th>{{ _("Nom") }}</th><th>{{ _("Téléphone") }}</th><th>{{ _("Groupes") }}</th><th>{{ _("Consentement") }}</th><th>{{ _("Ajouté le") }}</th></tr></thead>
+      <tbody>
+      {% for c in page.items %}
+        <tr>
+          <td><input class="form-check-input" type="checkbox" name="ids" value="{{ c.uuid }}"></td>
+          <td><a class="fw-semibold text-reset text-decoration-none" href="{{ url_for('web.contact_detail', uid=c.uuid) }}">{{ c.full_name or "—" }}</a>
+            {% if c.locale == 'ar' %}<span class="badge text-bg-light border">AR</span>{% endif %}</td>
+          <td class="phone">{{ c.phone|phone }}</td>
+          <td>{% for g in c.groups %}<span class="badge text-bg-light border" {% if g.color %}style="border-color:{{ g.color }}!important;color:{{ g.color }}"{% endif %}>{{ g.name }}</span> {% endfor %}</td>
+          <td>{% if c.consent_status == 'opt_in' %}<span class="text-success"><i class="bi bi-check-circle"></i> {{ _("Oui") }}</span>
+              {% elif c.consent_status == 'opted_out' %}<span class="text-danger"><i class="bi bi-slash-circle"></i> {{ _("Désinscrit") }}</span>
+              {% else %}<span class="text-body-secondary">—</span>{% endif %}</td>
+          <td class="small text-body-secondary">{{ c.created_at|dt("%d/%m/%Y") }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-body pt-0">{{ pagination(page, 'web.contacts') }}</div>
+  {% else %}
+  {% call empty_state("person-lines-fill", _("Aucun contact"), _("Ajoutez des contacts un par un ou importez un fichier Excel.")) %}
+    <a class="btn btn-primary mt-2" href="{{ url_for('web.imports') }}">{{ _("Importer un fichier") }}</a>
+  {% endcall %}
+  {% endif %}
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+var all = document.getElementById("check-all");
+if (all) all.addEventListener("change", function () {
+  document.querySelectorAll('input[name="ids"]').forEach(function (c) { c.checked = all.checked; });
+});
+</script>
+{% endblock %}

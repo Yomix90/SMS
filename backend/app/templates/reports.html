@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card %}
+{% block title %}{{ _("Rapports") }}{% endblock %}
+{% block content %}
+{% set a = request.args %}
+<form class="filters" method="get">
+  <div class="row g-2 align-items-end">
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Du") }}</label><input class="form-control form-control-sm" type="date" name="from" value="{{ f.date_from.isoformat() }}"></div>
+    <div class="col-6 col-md-2"><label class="form-label small">{{ _("Au") }}</label><input class="form-control form-control-sm" type="date" name="to" value="{{ f.date_to.isoformat() }}"></div>
+    <div class="col-6 col-md-3"><label class="form-label small">{{ _("Appareil") }}</label>
+      <select class="form-select form-select-sm" name="device"><option value="">{{ _("Tous") }}</option>{% for d in devices %}<option value="{{ d.uuid }}" {{ 'selected' if a.get('device') == d.uuid|string }}>{{ d.name }}</option>{% endfor %}</select></div>
+    <div class="col-6 col-md-3"><label class="form-label small">{{ _("Campagne") }}</label>
+      <select class="form-select form-select-sm" name="campaign"><option value="">{{ _("Toutes") }}</option>{% for c in campaigns %}<option value="{{ c.uuid }}" {{ 'selected' if a.get('campaign') == c.uuid|string }}>{{ c.name }}</option>{% endfor %}</select></div>
+    <div class="col-12 col-md-2 d-flex gap-1">
+      <button class="btn btn-sm btn-primary flex-grow-1" type="submit">{{ _("Appliquer") }}</button>
+      <div class="dropdown"><button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown"><i class="bi bi-download"></i></button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{{ url_for('web.reports', **dict(a.to_dict(), export='xlsx')) }}"><i class="bi bi-file-earmark-excel text-success"></i> Excel</a></li>
+          <li><a class="dropdown-item" href="{{ url_for('web.reports', **dict(a.to_dict(), export='pdf')) }}"><i class="bi bi-file-earmark-pdf text-danger"></i> PDF</a></li>
+        </ul></div>
+    </div>
+  </div>
+</form>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg">{{ stat_card(_("SMS sortants"), stats.total_out, "send", "primary", _("{n} segments facturés", n=stats.segments)) }}</div>
+  <div class="col-6 col-lg">{{ stat_card(_("Envoyés"), stats.sent, "send-check", "primary", _("{n} % de réussite", n=stats.success_rate)) }}</div>
+  <div class="col-6 col-lg">{{ stat_card(_("Livrés"), stats.delivered, "check2-all", "success", _("{n} % de livraison", n=stats.delivery_rate)) }}</div>
+  <div class="col-6 col-lg">{{ stat_card(_("Échecs"), stats.failed, "x-octagon", "danger") }}</div>
+  <div class="col-12 col-lg">{{ stat_card(_("Reçus"), stats.received, "inbox", "info") }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card"><div class="card-header"><i class="bi bi-graph-up"></i>{{ _("Évolution quotidienne") }}</div>
+      <div class="card-body"><div class="chart-box" style="height:320px"><canvas id="daily"></canvas></div></div></div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card"><div class="card-header"><i class="bi bi-pie-chart"></i>{{ _("Répartition par statut") }}</div>
+      <div class="card-body"><div class="chart-box" style="height:320px"><canvas id="statuses"></canvas></div></div></div>
+  </div>
+  <div class="col-12">
+    <div class="card"><div class="card-header"><i class="bi bi-phone"></i>{{ _("Par appareil") }}</div>
+      <div class="card-body">{% if devices_stats %}<div class="chart-box"><canvas id="per-device"></canvas></div>{% else %}<p class="text-body-secondary mb-0">{{ _("Aucune donnée sur la période.") }}</p>{% endif %}</div></div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+<script>
+  var L = { sent: {{ _("Envoyés")|tojson }}, delivered: {{ _("Livrés")|tojson }}, failed: {{ _("Échecs")|tojson }}, received: {{ _("Reçus")|tojson }} };
+  AppCharts.activity("daily", {{ series|tojson }}, L);
+  AppCharts.doughnut("statuses", {{ by_status|tojson }});
+  {% if devices_stats %}
+  AppCharts.bars("per-device", {{ devices_stats|map(attribute='name')|list|tojson }}, [
+    { key: "sent", label: L.sent, data: {{ devices_stats|map(attribute='sent')|list|tojson }} },
+    { key: "delivered", label: L.delivered, data: {{ devices_stats|map(attribute='delivered')|list|tojson }} },
+    { key: "failed", label: L.failed, data: {{ devices_stats|map(attribute='failed')|list|tojson }} }]);
+  {% endif %}
+</script>
+{% endblock %}

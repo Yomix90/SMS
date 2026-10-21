@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, battery, post_button %}
+{% block title %}{{ device.name }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.devices') }}"><i class="bi bi-arrow-left"></i> {{ _("Appareils") }}</a>
+<div class="row g-3 my-1" data-device-id="{{ device.uuid }}">
+  <div class="col-6 col-lg-3">{{ stat_card(_("État"), status_badge(device.status), "wifi", "success" if device.is_online else "danger", device.last_seen_at|ago) }}</div>
+  <div class="col-6 col-lg-3">{{ stat_card(_("Batterie"), battery(device.battery_level, device.is_charging), "battery-half", "warning") }}</div>
+  <div class="col-6 col-lg-3">{{ stat_card(_("Aujourd'hui"), usage.today ~ " / " ~ device.max_per_day, "calendar-day", "primary", _("{n} en cours", n=usage.in_flight)) }}</div>
+  <div class="col-6 col-lg-3">{{ stat_card(_("Reçus"), received, "inbox", "info") }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-sliders"></i>{{ _("Réglages et limites d'envoi") }}</div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <fieldset {{ 'disabled' if not current_user.is_admin or device.revoked_at }}>
+          <div class="mb-3"><label class="form-label">{{ _("Nom") }}</label>
+            <input class="form-control" name="name" value="{{ device.name }}" required maxlength="100"></div>
+          <div class="mb-3"><label class="form-label">{{ _("SIM d'envoi par défaut") }}</label>
+            <select class="form-select" name="default_sim_slot">
+              {% for s in device.sims or [] %}
+              <option value="{{ s.slot_index }}" {{ 'selected' if s.slot_index == device.default_sim_slot }}>SIM {{ s.slot_index + 1 }}{% if s.carrier %} — {{ s.carrier }}{% endif %}</option>
+              {% else %}<option value="0">SIM 1</option>{% endfor %}
+            </select></div>
+          <div class="row g-2 mb-2">
+            <div class="col-4"><label class="form-label">{{ _("Délai (s)") }}</label>
+              <input class="form-control" type="number" name="send_interval_sec" min="1" max="3600" value="{{ device.send_interval_sec }}"></div>
+            <div class="col-4"><label class="form-label">{{ _("Max / heure") }}</label>
+              <input class="form-control" type="number" name="max_per_hour" min="1" value="{{ device.max_per_hour }}"></div>
+            <div class="col-4"><label class="form-label">{{ _("Max / jour") }}</label>
+              <input class="form-control" type="number" name="max_per_day" min="1" value="{{ device.max_per_day }}"></div>
+          </div>
+          <div class="form-text mb-3">{{ _("Des limites prudentes évitent le blocage de la SIM par l'opérateur (ex. 1 SMS / 5 s, 100 / h, 500 / jour).") }}</div>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" name="is_enabled" id="is_enabled" {{ 'checked' if device.is_enabled }}>
+            <label class="form-check-label" for="is_enabled">{{ _("Appareil actif (reçoit des envois)") }}</label>
+          </div>
+          <button class="btn btn-primary" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle"></i>{{ _("Informations") }}</div>
+      <ul class="list-group list-group-flush small">
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Modèle") }}</span><span>{{ device.manufacturer or "" }} {{ device.model or "—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">Android</span><span>{{ device.android_version or "—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Version de l'app") }}</span><span>{{ device.app_version or "—" }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Signal") }}</span><span>{{ device.signal_level if device.signal_level is not none else "—" }}/4</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("File locale") }}</span><span>{{ device.local_queue_size }}</span></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Token") }}</span><code>{{ device.token_prefix }}…</code></li>
+        <li class="list-group-item d-flex justify-content-between"><span class="text-body-secondary">{{ _("Ajouté le") }}</span><span>{{ device.created_at|dt }}</span></li>
+      </ul>
+      {% if current_user.is_admin %}
+      <div class="card-body d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#pairModal"><i class="bi bi-arrow-repeat"></i> {{ _("Réappairer (nouveau token)") }}</button>
+        {% if not device.revoked_at %}
+        {{ post_button(url_for('web.device_revoke', uid=device.uuid), _("Révoquer"), "slash-circle", "btn-outline-danger btn-sm", confirm=_("Révoquer cet appareil ? Il ne pourra plus se connecter.")) }}
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-pie-chart"></i>{{ _("Répartition des envois") }}</div>
+      <div class="card-body">
+        <div class="d-flex flex-wrap gap-2">
+          {% for status, n in counts|dictsort %}<span>{{ status_badge(status) }} <strong>{{ n }}</strong></span>{% else %}<span class="text-body-secondary">{{ _("Aucun envoi.") }}</span>{% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history"></i>{{ _("Derniers messages") }}
+        <div class="actions"><a class="btn btn-sm btn-outline-secondary" href="{{ url_for('web.messages', device=device.uuid) }}">{{ _("Tout voir") }}</a></div></div>
+      <div class="table-responsive"><table class="table table-hover align-middle small">
+        <tbody>
+        {% for m in recent %}
+          <tr data-message-id="{{ m.uuid }}">
+            <td><i class="bi bi-{{ 'arrow-up-right text-primary' if m.direction == 'out' else 'arrow-down-left text-success' }}"></i></td>
+            <td class="phone">{{ m.phone|phone }}</td>
+            <td><div class="msg-preview" dir="auto"><a class="text-reset text-decoration-none" href="{{ url_for('web.message_detail', uid=m.uuid) }}">{{ m.body }}</a></div></td>
+            <td>{% if m.sim_slot is not none %}SIM {{ m.sim_slot + 1 }}{% endif %}</td>
+            <td class="status-cell">{{ status_badge(m.status) }}</td>
+            <td class="text-body-secondary text-nowrap">{{ m.created_at|dt }}</td>
+          </tr>
+        {% else %}<tr><td class="text-center text-body-secondary py-4">{{ _("Aucun message.") }}</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+{% set pair_device = device %}{% set pair_title = _("Réappairer l'appareil") %}
+{% include "devices/_pair_modal.html" %}
+{% endblock %}

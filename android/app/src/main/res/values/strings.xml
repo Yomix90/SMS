@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SMS Gateway</string>
+    <string name="channel_service">Service passerelle</string>
+    <string name="channel_alerts">Alertes</string>
+    <string name="notification_title">%1$s · passerelle active</string>
+
+    <!-- États -->
+    <string name="status_connecting">Connexion au serveur…</string>
+    <string name="status_online">Connecté (temps réel)</string>
+    <string name="status_polling">Connecté (mode secours)</string>
+    <string name="status_offline">Hors ligne : nouvelle tentative…</string>
+    <string name="status_unpaired">Non appairé</string>
+    <string name="status_stopped">Service arrêté</string>
+    <string name="last_contact">Dernier contact %1$s</string>
+    <string name="http_warning">Connexion non chiffrée (HTTP) : utilisez HTTPS en production.</string>
+
+    <!-- Envois suspendus -->
+    <string name="blocked_paused">Envois en pause sur ce téléphone</string>
+    <string name="blocked_disabled">Appareil désactivé depuis le tableau de bord</string>
+    <string name="blocked_battery">Batterie faible (%1$d %%) : envois suspendus jusqu\'à la mise en charge</string>
+    <string name="blocked_hour">Limite horaire atteinte (%1$d SMS / heure)</string>
+    <string name="blocked_day">Limite journalière atteinte (%1$d SMS / jour)</string>
+
+    <!-- Écran principal -->
+    <string name="pause">Pause</string>
+    <string name="resume">Reprendre</string>
+    <string name="reconnect">Reconnecter</string>
+    <string name="reconnecting">Reconnexion en cours…</string>
+    <string name="paused_log">Envois mis en pause</string>
+    <string name="resumed_log">Envois repris</string>
+    <string name="stat_sent">Envoyés aujourd\'hui</string>
+    <string name="stat_received">Reçus aujourd\'hui</string>
+    <string name="stat_queue">En file</string>
+    <string name="journal">Journal</string>
+    <string name="settings">Paramètres</string>
+
+    <!-- Appairage -->
+    <string name="pair_title">Appairer ce téléphone</string>
+    <string name="pair_help">Dans le tableau de bord, ouvrez Appareils › Ajouter un appareil, puis scannez le QR code affiché.</string>
+    <string name="scan_qr">Scanner le QR code</string>
+    <string name="scan_prompt">Visez le QR code affiché dans le tableau de bord</string>
+    <string name="manual_pairing">Saisie manuelle</string>
+    <string name="manual_hint">Collez le contenu « Saisie manuelle » du tableau de bord, ou l\'adresse du serveur suivie du code</string>
+    <string name="pair">Appairer</string>
+    <string name="paired_ok">Appairé : %1$s</string>
+    <string name="pairing_failed">Échec de l\'appairage</string>
+    <string name="err_qr_unknown">Ce QR code n\'est pas un code d\'appairage SMS Gateway.</string>
+    <string name="err_qr_incomplete">QR code incomplet : régénérez-le depuis le tableau de bord.</string>
+    <string name="err_code_expired">Code expiré ou déjà utilisé : générez un nouveau QR code.</string>
+    <string name="err_server">Le serveur a refusé l\'appairage.</string>
+    <string name="err_unreachable">Serveur injoignable : vérifiez l\'adresse et la connexion Internet du téléphone.</string>
+
+    <!-- Permissions et batterie -->
+    <string name="permissions_missing">Permissions SMS / téléphone manquantes : la passerelle ne peut pas fonctionner.</string>
+    <string name="grant">Accorder</string>
+    <string name="battery_warning">L\'optimisation de batterie peut couper la passerelle écran éteint. Excluez l\'application pour un fonctionnement 24 h/24.</string>
+    <string name="disable_optimization">Désactiver l\'optimisation de batterie</string>
+    <string name="hint_xiaomi">Xiaomi : Paramètres › Applications › SMS Gateway › Démarrage automatique (activer) et Économiseur de batterie › Aucune restriction.</string>
+    <string name="hint_huawei">Huawei : Paramètres › Batterie › Lancement d\'applications › SMS Gateway › Gérer manuellement (tout activer).</string>
+    <string name="hint_oppo">Oppo / Realme : Paramètres › Batterie › autoriser l\'activité en arrière-plan et le démarrage automatique.</string>
+    <string name="hint_samsung">Samsung : Paramètres › Batterie › Limites d\'utilisation en arrière-plan › retirer SMS Gateway des applications en veille.</string>
+    <string name="hint_vivo">Vivo : Paramètres › Batterie › Consommation élevée en arrière-plan › autoriser SMS Gateway.</string>
+
+    <!-- Paramètres -->
+    <string name="section_server">Serveur</string>
+    <string name="server_url">Adresse du serveur</string>
+    <string name="device_name">Nom de l\'appareil</string>
+    <string name="limits">Limites d\'envoi</string>
+    <string name="limits_value">1 SMS toutes les %1$d s · %2$d / heure · %3$d / jour</string>
+    <string name="limits_help">Ces limites se modifient dans le tableau de bord (Appareils) et sont appliquées automatiquement.</string>
+    <string name="enabled_yes">Envois autorisés par le serveur</string>
+    <string name="enabled_no">Envois désactivés depuis le tableau de bord</string>
+    <string name="section_sim">Cartes SIM</string>
+    <string name="sim_help">★ = SIM d\'envoi par défaut (réglable dans le tableau de bord). Chaque message peut aussi imposer une SIM.</string>
+    <string name="no_sim_info">Aucune SIM détectée (ou permission téléphone refusée)</string>
+    <string name="section_battery">Batterie et arrière-plan</string>
+    <string name="min_battery">Ne pas envoyer sous ce niveau de batterie (sauf en charge)</string>
+    <string name="min_battery_value">%1$d %%</string>
+    <string name="min_battery_off">Désactivé</string>
+    <string name="battery_unrestricted">✓ Optimisation de batterie désactivée</string>
+    <string name="battery_restricted">⚠ Optimisation de batterie active : risque d\'arrêt en arrière-plan</string>
+    <string name="app_settings">Paramètres de l\'application</string>
+    <string name="notification_settings">Notifications</string>
+    <string name="unpair">Désappairer</string>
+    <string name="unpair_confirm">Le téléphone cessera d\'envoyer et de recevoir des SMS pour le serveur. Il faudra scanner un nouveau QR code.</string>
+    <string name="version_label">Version %1$s</string>
+
+    <!-- Alertes -->
+    <string name="alert_revoked_title">Appareil déconnecté du serveur</string>
+    <string name="alert_revoked_text">Le token a été révoqué ou renouvelé depuis le tableau de bord. Ouvrez l\'application et scannez un nouveau QR code.</string>
+</resources>

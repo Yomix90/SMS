@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea, device_select, sim_select %}
+{% block title %}{{ _("Envoyer un SMS") }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-body">
+        <form method="post" id="send-form">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="contact_id" id="contact_id" value="{{ form.contact_id or '' }}">
+          <div class="mb-3">
+            <label class="form-label" for="phone">{{ _("Destinataire") }}</label>
+            <input class="form-control form-control-lg" id="phone" name="phone" value="{{ form.phone or '' }}" required
+                   list="contact-suggestions" autocomplete="off" dir="ltr" placeholder="06 12 34 56 78">
+            <datalist id="contact-suggestions"></datalist>
+            <div class="form-text">{{ _("Numéro (06…, 07…, +212…) ou recherche d'un contact par nom.") }}
+              <span id="contact-chosen" class="fw-semibold"></span></div>
+          </div>
+          <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-end mb-1">
+              <label class="form-label mb-0" for="body">{{ _("Message") }}</label>
+              {% if templates %}
+              <select class="form-select form-select-sm w-auto" id="template-picker">
+                <option value="">{{ _("Insérer un modèle…") }}</option>
+                {% for t in templates %}<option data-body="{{ t.body }}">{{ t.name }} ({{ t.language|upper }})</option>{% endfor %}
+              </select>
+              {% endif %}
+            </div>
+            {{ sms_textarea(value=form.body or "", rows=6, variables=["prenom", "nom", "montant", "date_echeance", "reference"]) }}
+            <div class="form-text">{{ _("Les variables sont remplacées par les données du contact sélectionné.") }}</div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-7"><label class="form-label">{{ _("Appareil") }}</label>{{ device_select(devices, form.device_id) }}</div>
+            <div class="col-md-5"><label class="form-label">{{ _("SIM") }}</label>{{ sim_select((form.sim_slot|int) if form.sim_slot else none) }}</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label" for="scheduled_at">{{ _("Programmer l'envoi (facultatif)") }}</label>
+            <input class="form-control" type="datetime-local" id="scheduled_at" name="scheduled_at" value="{{ form.scheduled_at or '' }}">
+            <div class="form-text">{{ _("Heure de Casablanca. Hors fenêtre horaire autorisée, l'envoi attend l'ouverture suivante.") }}</div>
+          </div>
+          <button class="btn btn-primary btn-lg" type="submit"><i class="bi bi-send"></i> {{ _("Envoyer") }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-phone"></i>{{ _("Aperçu") }}</div>
+      <div class="card-body">
+        <div class="phone-preview"><div class="d-flex flex-column align-items-end"><div class="bubble out" id="preview-bubble" dir="auto">…</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var body = document.getElementById("body"), bubble = document.getElementById("preview-bubble");
+  var phone = document.getElementById("phone"), list = document.getElementById("contact-suggestions");
+  var contactId = document.getElementById("contact_id"), chosen = document.getElementById("contact-chosen");
+  var contacts = {}, vars = {};
+  function preview() {
+    var text = body.value.replace(/\{([^{}\n]{1,64})\}/g, function (m, k) {
+      k = k.trim().toLowerCase();
+      return vars[k] != null && vars[k] !== "" ? vars[k] : m;
+    });
+    bubble.textContent = text || "…";
+  }
+  body.addEventListener("input", preview); preview();
+  var picker = document.getElementById("template-picker");
+  if (picker) picker.addEventListener("change", function () {
+    var o = picker.selectedOptions[0];
+    if (o && o.dataset.body) { body.value = o.dataset.body; body.dispatchEvent(new Event("input")); }
+    picker.value = "";
+  });
+  var timer;
+  phone.addEventListener("input", function () {
+    var q = phone.value.trim();
+    var match = contacts[q];
+    if (match) {
+      phone.value = match.phone; contactId.value = match.id; vars = match.variables;
+      chosen.textContent = "→ " + match.name; preview(); return;
+    }
+    contactId.value = ""; chosen.textContent = ""; vars = {}; preview();
+    clearTimeout(timer);
+    if (q.length < 2) return;
+    timer = setTimeout(function () {
+      fetch("{{ url_for('web.contacts_search') }}?q=" + encodeURIComponent(q)).then(function (r) { return r.json(); })
+        .then(function (items) {
+          list.innerHTML = ""; contacts = {};
+          items.forEach(function (c) {
+            var label = c.name + " — " + c.display;
+            contacts[label] = c;
+            var o = document.createElement("option"); o.value = label; list.appendChild(o);
+          });
+        });
+    }, 250);
+  });
+})();
+</script>
+{% endblock %}

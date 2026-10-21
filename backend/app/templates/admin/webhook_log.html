@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}{{ _("Journal du webhook") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.admin_api_keys') }}"><i class="bi bi-arrow-left"></i> {{ _("API & webhooks") }}</a>
+<p class="mt-2 mb-3 text-break" dir="ltr"><code>{{ hook.url }}</code></p>
+<div class="card"><div class="table-responsive"><table class="table align-middle small">
+  <thead><tr><th>{{ _("Date") }}</th><th>{{ _("Événement") }}</th><th>{{ _("Statut") }}</th><th>{{ _("Tentatives") }}</th><th>{{ _("Réponse") }}</th></tr></thead>
+  <tbody>
+  {% for d in page.items %}
+    <tr>
+      <td class="text-nowrap">{{ d.created_at|dt("%d/%m/%Y %H:%M:%S") }}</td>
+      <td><code>{{ d.event }}</code></td>
+      <td>{% if d.status == 'success' %}<span class="badge text-bg-success">OK</span>{% elif d.status == 'failed' %}<span class="badge text-bg-danger">{{ _("Échec") }}</span>
+          {% else %}<span class="badge text-bg-warning">{{ _("En attente") }}</span>{% if d.next_attempt_at %}<div class="text-body-secondary">{{ d.next_attempt_at|dt("%H:%M") }}</div>{% endif %}{% endif %}</td>
+      <td>{{ d.attempts }}</td>
+      <td>{% if d.response_code %}<strong>{{ d.response_code }}</strong>{% endif %} {% if d.duration_ms %}<span class="text-body-secondary">{{ d.duration_ms }} ms</span>{% endif %}
+        <div class="text-body-secondary text-truncate" style="max-width:380px" dir="ltr">{{ d.response_body or "" }}</div></td>
+    </tr>
+  {% else %}<tr><td colspan="5" class="text-center text-body-secondary py-4">{{ _("Aucune livraison.") }}</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+<div class="card-body pt-0">{{ pagination(page, 'web.admin_webhook_log') }}</div></div>
+{% endblock %}

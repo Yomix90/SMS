@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Utilisateurs") }}{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="table-responsive"><table class="table align-middle">
+        <thead><tr><th>{{ _("Utilisateur") }}</th><th>{{ _("Rôle") }}</th><th>{{ _("Dernière connexion") }}</th><th>{{ _("État") }}</th><th></th></tr></thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td><div class="fw-semibold">{{ u.full_name or "—" }}</div><div class="small text-body-secondary" dir="ltr">{{ u.email }}</div></td>
+            <td>{% if u.is_admin %}<span class="badge text-bg-primary">{{ _("Administrateur") }}</span>{% else %}<span class="badge text-bg-light border">{{ _("Opérateur") }}</span>{% endif %}</td>
+            <td class="small">{{ u.last_login_at|ago }}</td>
+            <td>{% if not u.is_active %}<span class="badge text-bg-secondary">{{ _("Désactivé") }}</span>
+                {% elif u.locked_until and u.locked_until > now() %}<span class="badge text-bg-warning">{{ _("Verrouillé") }}</span>
+                {% else %}<span class="badge text-bg-success">{{ _("Actif") }}</span>{% endif %}</td>
+            <td class="text-end"><button class="btn btn-sm btn-light" data-bs-toggle="collapse" data-bs-target="#edit-{{ u.id }}"><i class="bi bi-pencil"></i></button></td>
+          </tr>
+          <tr class="collapse" id="edit-{{ u.id }}"><td colspan="5" class="bg-body-tertiary">
+            <form method="post" action="{{ url_for('web.admin_user_update', uid=u.id) }}" class="row g-2 align-items-end">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="col-md-3"><label class="form-label small">{{ _("Nom complet") }}</label><input class="form-control form-control-sm" name="full_name" value="{{ u.full_name or '' }}"></div>
+              <div class="col-md-2"><label class="form-label small">{{ _("Rôle") }}</label>
+                <select class="form-select form-select-sm" name="role"><option value="operator" {{ 'selected' if not u.is_admin }}>{{ _("Opérateur") }}</option><option value="admin" {{ 'selected' if u.is_admin }}>{{ _("Administrateur") }}</option></select></div>
+              <div class="col-md-3"><label class="form-label small">{{ _("Nouveau mot de passe") }}</label><input class="form-control form-control-sm" type="password" name="password" autocomplete="new-password"></div>
+              <div class="col-md-2"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" id="ua{{ u.id }}" {{ 'checked' if u.is_active }}><label class="form-check-label small" for="ua{{ u.id }}">{{ _("Actif") }}</label></div></div>
+              <div class="col-md-2"><button class="btn btn-sm btn-primary w-100">{{ _("Enregistrer") }}</button></div>
+            </form>
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <form method="post" class="card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-person-plus"></i>{{ _("Nouvel utilisateur") }}</div>
+      <div class="card-body">
+        <div class="mb-2"><label class="form-label">{{ _("Email") }}</label><input class="form-control" type="email" name="email" required dir="ltr"></div>
+        <div class="mb-2"><label class="form-label">{{ _("Nom complet") }}</label><input class="form-control" name="full_name"></div>
+        <div class="mb-2"><label class="form-label">{{ _("Mot de passe") }}</label><input class="form-control" type="password" name="password" required minlength="10" autocomplete="new-password">
+          <div class="form-text">{{ _("10 caractères minimum, avec majuscules, minuscules et chiffres.") }}</div></div>
+        <div class="row g-2 mb-3">
+          <div class="col-6"><label class="form-label">{{ _("Rôle") }}</label><select class="form-select" name="role"><option value="operator">{{ _("Opérateur") }}</option><option value="admin">{{ _("Administrateur") }}</option></select></div>
+          <div class="col-6"><label class="form-label">{{ _("Langue") }}</label><select class="form-select" name="locale"><option value="fr">Français</option><option value="ar">العربية</option></select></div>
+        </div>
+        <button class="btn btn-primary" type="submit">{{ _("Créer") }}</button>
+        <div class="small text-body-secondary mt-3">{{ _("Les opérateurs envoient des SMS, gèrent contacts, campagnes et boîte de réception. Les administrateurs gèrent aussi les appareils, utilisateurs, clés API et paramètres.") }}</div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

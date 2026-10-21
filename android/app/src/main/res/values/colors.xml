@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand">#2563EB</color>
+    <color name="brand_dark">#1D4ED8</color>
+    <color name="ok">#10B981</color>
+    <color name="warn">#F59E0B</color>
+    <color name="error">#EF4444</color>
+    <color name="incoming">#8B5CF6</color>
+    <color name="muted">#94A3B8</color>
+    <color name="surface_bg">#F4F6FA</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="warn_bg">#FFF7E6</color>
+    <color name="error_bg">#FDECEC</color>
+</resources>

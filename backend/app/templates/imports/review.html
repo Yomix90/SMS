@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "_macros.html" import stat_card, sms_textarea, device_select, sim_select %}
+{% block title %}{{ _("Import : contrôle et envoi") }}{% endblock %}
+{% block content %}
+{% set step = 3 %}{% include "imports/_steps.html" %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">{{ stat_card(_("Lignes"), summary.total, "list-ol", "secondary") }}</div>
+  <div class="col-6 col-md-3">{{ stat_card(_("Valides"), summary.valid, "check-circle", "success") }}</div>
+  <div class="col-6 col-md-3">{{ stat_card(_("Invalides"), summary.invalid + summary.get('blacklisted', 0), "x-circle", "danger") }}</div>
+  <div class="col-6 col-md-3">{{ stat_card(_("Doublons"), summary.duplicate, "files", "warning") }}</div>
+</div>
+
+<div class="row g-4">
+  <div class="col-xl-7">
+    <div class="card mb-4">
+      <div class="card-header"><i class="bi bi-eye"></i>{{ _("Aperçu des messages") }}
+        <div class="actions"><a class="btn btn-sm btn-light" href="{{ url_for('web.import_map', uid=imp.uuid) }}"><i class="bi bi-pencil"></i> {{ _("Modifier les colonnes") }}</a></div></div>
+      <div class="table-responsive"><table class="table align-middle small">
+        <thead><tr><th>{{ _("Ligne") }}</th><th>{{ _("Numéro") }}</th><th>{{ _("Message final") }}</th></tr></thead>
+        <tbody>
+        {% for row, text in previews %}
+          <tr><td>{{ row.row_number }}</td><td class="phone">{{ row.phone_e164|phone }}</td>
+            <td><div class="bubble out" dir="auto" style="max-width:100%">{{ text }}</div>
+              {% if row.error %}<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle"></i> {{ row.error }}</div>{% endif %}</td></tr>
+        {% else %}
+          <tr><td colspan="3" class="text-center text-body-secondary py-4">{{ _("Aucune ligne valide.") }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+
+    {% if rejected %}
+    <div class="card">
+      <div class="card-header text-danger"><i class="bi bi-exclamation-octagon"></i>{{ _("Lignes rejetées") }}
+        <div class="actions">{% if imp.error_report_path %}<a class="btn btn-sm btn-outline-danger" href="{{ url_for('web.import_report', uid=imp.uuid) }}"><i class="bi bi-download"></i> {{ _("Rapport d'erreurs (Excel)") }}</a>{% endif %}</div></div>
+      <div class="table-responsive" style="max-height:360px"><table class="table table-sm align-middle small">
+        <thead><tr><th>{{ _("Ligne") }}</th><th>{{ _("Valeur") }}</th><th>{{ _("Motif") }}</th></tr></thead>
+        <tbody>
+        {% for r in rejected %}
+          <tr><td>{{ r.row_number }}</td><td class="phone">{{ r.phone_raw or "—" }}</td>
+            <td><span class="badge text-bg-{{ 'warning' if r.status == 'duplicate' else 'danger' }}">{{ {'invalid': _("Invalide"), 'duplicate': _("Doublon"), 'blacklisted': _("Liste noire")}.get(r.status, r.status) }}</span> {{ r.error or "" }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-xl-5">
+    <form method="post" action="{{ url_for('web.import_send', uid=imp.uuid) }}" class="card mb-4"
+          data-confirm="{{ _('Envoyer {n} SMS maintenant ?', n=summary.valid) }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-send"></i>{{ _("Envoi") }}</div>
+      <div class="card-body">
+        <div class="mb-3"><label class="form-label">{{ _("Nom de la campagne") }}</label>
+          <input class="form-control" name="name" value="{{ imp.original_filename.rsplit('.', 1)[0] }}" maxlength="150"></div>
+        <label class="form-label">{{ _("Texte commun") }}</label>
+        {{ sms_textarea(value=body, rows=4, required=False, variables=variables) }}
+        <div class="row g-2 my-3">
+          <div class="col-7"><label class="form-label">{{ _("Appareil") }}</label>{{ device_select(devices) }}</div>
+          <div class="col-5"><label class="form-label">{{ _("SIM") }}</label>{{ sim_select() }}</div>
+        </div>
+        <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+          <div class="form-check"><input class="form-check-input" type="radio" name="when" value="now" id="w-now" checked><label class="form-check-label" for="w-now">{{ _("Maintenant") }}</label></div>
+          <div class="form-check"><input class="form-check-input" type="radio" name="when" value="later" id="w-later"><label class="form-check-label" for="w-later">{{ _("Planifier") }}</label></div>
+          <input class="form-control form-control-sm w-auto" type="datetime-local" name="scheduled_at">
+        </div>
+        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="add_stop_footer" id="stop"><label class="form-check-label" for="stop">{{ _("Ajouter la mention de désinscription (STOP)") }}</label></div>
+        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="save_contacts" id="save"><label class="form-check-label" for="save">{{ _("Enregistrer les destinataires dans les contacts") }}</label></div>
+        <div class="input-group input-group-sm mb-3">
+          <span class="input-group-text">{{ _("Groupe") }}</span>
+          <select class="form-select" name="group_id"><option value="">—</option>{% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select>
+          <input class="form-control" name="new_group" placeholder="{{ _('ou nouveau groupe') }}">
+        </div>
+        <button class="btn btn-primary btn-lg w-100" type="submit" {{ 'disabled' if not summary.valid }}><i class="bi bi-send"></i> {{ _("Envoyer à {n} destinataires", n=summary.valid) }}</button>
+      </div>
+    </form>
+    <form method="post" action="{{ url_for('web.import_save_contacts', uid=imp.uuid) }}" class="card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-body">
+        <div class="fw-semibold mb-2"><i class="bi bi-person-plus"></i> {{ _("Importer seulement les contacts (sans envoi)") }}</div>
+        <div class="d-flex gap-2 mb-2">
+          <select class="form-select form-select-sm" name="group_id"><option value="">{{ _("Sans groupe") }}</option>{% for g in groups %}<option value="{{ g.id }}">{{ g.name }}</option>{% endfor %}</select>
+          <button class="btn btn-sm btn-outline-primary text-nowrap" type="submit" {{ 'disabled' if not summary.valid }}>{{ _("Importer") }}</button>
+        </div>
+        <div class="form-check small"><input class="form-check-input" type="checkbox" name="consent" id="consent"><label class="form-check-label" for="consent">{{ _("Ces personnes ont donné leur consentement (loi 09-08)") }}</label></div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

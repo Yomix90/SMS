@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button %}
+{% block title %}{{ _("API & webhooks") }}{% endblock %}
+{% block content %}
+{% if new_token %}
+<div class="alert alert-success">
+  <div class="fw-semibold mb-2"><i class="bi bi-key"></i> {{ _("Nouvelle clé API : copiez-la maintenant, elle ne sera plus affichée.") }}</div>
+  <div class="d-flex gap-2"><code class="token flex-grow-1" id="new-token" dir="ltr">{{ new_token }}</code>
+    <button class="btn btn-outline-success" type="button" data-copy="#new-token"><i class="bi bi-clipboard"></i></button></div>
+</div>
+{% endif %}
+{% if new_secret %}
+<div class="alert alert-success">
+  <div class="fw-semibold mb-2"><i class="bi bi-shield-lock"></i> {{ _("Secret de signature du webhook : conservez-le pour vérifier l'en-tête X-Webhook-Signature.") }}</div>
+  <div class="d-flex gap-2"><code class="token flex-grow-1" id="new-secret" dir="ltr">{{ new_secret }}</code>
+    <button class="btn btn-outline-success" type="button" data-copy="#new-secret"><i class="bi bi-clipboard"></i></button></div>
+</div>
+{% endif %}
+
+<div class="d-flex align-items-center mb-3">
+  <h2 class="h6 mb-0">{{ _("Clés API") }}</h2>
+  <a class="btn btn-sm btn-outline-secondary ms-auto" href="/api/docs" target="_blank" rel="noopener"><i class="bi bi-book"></i> {{ _("Documentation (Swagger)") }}</a>
+</div>
+<div class="row g-4 mb-5">
+  <div class="col-xl-8">
+    <div class="card"><div class="table-responsive"><table class="table align-middle small">
+      <thead><tr><th>{{ _("Nom") }}</th><th>{{ _("Préfixe") }}</th><th>{{ _("Permissions") }}</th><th>{{ _("Limites") }}</th><th>{{ _("Dernière utilisation") }}</th><th></th></tr></thead>
+      <tbody>
+      {% for k in keys %}
+        <tr class="{{ 'opacity-50' if not k.is_valid }}">
+          <td class="fw-semibold">{{ k.name }}{% if k.revoked_at %} <span class="badge text-bg-secondary">{{ _("Révoquée") }}</span>{% elif not k.is_valid %} <span class="badge text-bg-warning">{{ _("Expirée") }}</span>{% endif %}</td>
+          <td><code>{{ k.prefix }}…</code></td>
+          <td>{% if '*' in k.scopes %}<span class="badge text-bg-primary">{{ _("Toutes") }}</span>{% else %}{% for s in k.scopes %}<span class="badge text-bg-light border" title="{{ _(scopes.get(s, s)) }}">{{ s }}</span> {% endfor %}{% endif %}</td>
+          <td class="text-nowrap">{{ k.rate_limit_per_min }}/min{% if k.daily_quota %} · {{ k.daily_quota }}/{{ _("jour") }}{% endif %}{% if k.allow_outside_window %} · <i class="bi bi-moon" title="{{ _('Hors fenêtre horaire') }}"></i>{% endif %}
+            {% if k.expires_at %}<div class="text-body-secondary">{{ _("expire le") }} {{ k.expires_at|dt("%d/%m/%Y") }}</div>{% endif %}</td>
+          <td>{{ k.last_used_at|ago }}{% if k.last_used_ip %}<div class="text-body-secondary">{{ k.last_used_ip }}</div>{% endif %}</td>
+          <td class="text-end text-nowrap">{% if not k.revoked_at %}
+            {{ post_button(url_for('web.admin_api_key_action', kid=k.id, action='rotate'), None, "arrow-repeat", "btn-sm btn-light", confirm=_("Remplacer cette clé ? L'ancienne cessera immédiatement de fonctionner."), title=_("Rotation")) }}
+            {{ post_button(url_for('web.admin_api_key_action', kid=k.id, action='revoke'), None, "x-circle", "btn-sm btn-outline-danger", confirm=True, title=_("Révoquer")) }}{% endif %}</td>
+        </tr>
+      {% else %}<tr><td colspan="6" class="text-center text-body-secondary py-4">{{ _("Aucune clé API.") }}</td></tr>{% endfor %}
+      </tbody>
+    </table></div></div>
+  </div>
+  <div class="col-xl-4">
+    <form method="post" class="card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-plus-lg"></i>{{ _("Nouvelle clé") }}</div>
+      <div class="card-body">
+        <div class="mb-2"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="name" required placeholder="{{ _('ex. ERP, site e-commerce') }}"></div>
+        <div class="form-check mb-1"><input class="form-check-input" type="checkbox" name="all_scopes" id="all_scopes"><label class="form-check-label" for="all_scopes">{{ _("Toutes les permissions") }}</label></div>
+        <div class="border rounded p-2 mb-2 small" style="max-height:180px;overflow:auto" id="scope-list">
+          {% for s, label in scopes.items() %}<div class="form-check"><input class="form-check-input" type="checkbox" name="scopes" value="{{ s }}" id="sc-{{ loop.index }}" {{ 'checked' if s in ('messages:send', 'messages:read') }}>
+            <label class="form-check-label" for="sc-{{ loop.index }}">{{ _(label) }} <code>{{ s }}</code></label></div>{% endfor %}
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6"><label class="form-label small">{{ _("Requêtes / min") }}</label><input class="form-control form-control-sm" type="number" name="rate_limit_per_min" value="60" min="1"></div>
+          <div class="col-6"><label class="form-label small">{{ _("SMS / jour") }}</label><input class="form-control form-control-sm" type="number" name="daily_quota" min="1" placeholder="∞"></div>
+        </div>
+        <div class="mb-2"><label class="form-label small">{{ _("Expiration") }}</label><input class="form-control form-control-sm" type="date" name="expires_at"></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" name="allow_outside_window" id="aow"><label class="form-check-label small" for="aow">{{ _("Autoriser l'envoi hors fenêtre horaire (SMS transactionnels, OTP)") }}</label></div>
+        <button class="btn btn-primary" type="submit">{{ _("Générer la clé") }}</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<h2 class="h6 mb-3">{{ _("Webhooks") }}</h2>
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="card"><div class="table-responsive"><table class="table align-middle small">
+      <thead><tr><th>URL</th><th>{{ _("Événements") }}</th><th>{{ _("État") }}</th><th></th></tr></thead>
+      <tbody>
+      {% for h in hooks %}
+        <tr>
+          <td class="text-break" dir="ltr">{{ h.url }}</td>
+          <td>{% for e in h.events %}<span class="badge text-bg-light border">{{ e }}</span> {% endfor %}</td>
+          <td>{% if h.is_active %}<span class="badge text-bg-success">{{ _("Actif") }}</span>{% else %}<span class="badge text-bg-secondary">{{ _("Inactif") }}</span>{% endif %}
+            {% if h.failure_count %}<div class="text-danger">{{ _("{n} échecs consécutifs", n=h.failure_count) }}</div>{% endif %}</td>
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-light" href="{{ url_for('web.admin_webhook_log', wid=h.id) }}" title="{{ _('Journal') }}"><i class="bi bi-list-ul"></i></a>
+            {{ post_button(url_for('web.admin_webhook_action', wid=h.id, action='test'), None, "lightning", "btn-sm btn-light", title=_("Tester")) }}
+            {{ post_button(url_for('web.admin_webhook_action', wid=h.id, action='toggle'), None, "pause-fill" if h.is_active else "play-fill", "btn-sm btn-light") }}
+            {{ post_button(url_for('web.admin_webhook_action', wid=h.id, action='delete'), None, "trash", "btn-sm btn-outline-danger", confirm=True) }}
+          </td>
+        </tr>
+      {% else %}<tr><td colspan="4" class="text-center text-body-secondary py-4">{{ _("Aucun webhook.") }}</td></tr>{% endfor %}
+      </tbody>
+    </table></div></div>
+  </div>
+  <div class="col-xl-4">
+    <form method="post" action="{{ url_for('web.admin_webhook_create') }}" class="card">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="card-header"><i class="bi bi-plus-lg"></i>{{ _("Nouveau webhook") }}</div>
+      <div class="card-body">
+        <div class="mb-2"><label class="form-label">URL (HTTPS)</label><input class="form-control" type="url" name="url" required placeholder="https://exemple.ma/webhooks/sms" dir="ltr"></div>
+        <label class="form-label">{{ _("Événements") }}</label>
+        {% for e in events %}<div class="form-check"><input class="form-check-input" type="checkbox" name="events" value="{{ e }}" id="ev-{{ loop.index }}" {{ 'checked' if e in ('sms.delivered', 'sms.failed', 'sms.received') }}><label class="form-check-label small" for="ev-{{ loop.index }}"><code>{{ e }}</code></label></div>{% endfor %}
+        <button class="btn btn-primary mt-3" type="submit">{{ _("Créer") }}</button>
+        <div class="form-text">{{ _("Chaque appel est signé (HMAC-SHA256) et relancé jusqu'à 5 fois en cas d'échec.") }}</div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+var all = document.getElementById("all_scopes");
+all.addEventListener("change", function () { document.getElementById("scope-list").style.opacity = all.checked ? .4 : 1; });
+</script>
+{% endblock %}

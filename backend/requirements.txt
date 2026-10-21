@@ -1,0 +1,39 @@
+# --- Framework web ---
+Flask>=3.0,<4
+Flask-SQLAlchemy>=3.1,<4
+SQLAlchemy>=2.0.30,<3
+Flask-Migrate>=4.0,<5
+Flask-Login>=0.6.3,<1
+Flask-WTF>=1.2,<2
+Flask-Babel>=4.0,<5
+flask-smorest>=0.44,<1
+marshmallow>=3.20
+python-dotenv>=1.0
+
+# --- Temps réel (Socket.IO) ---
+Flask-SocketIO>=5.3,<6
+simple-websocket>=1.0
+
+# --- Tâches planifiées ---
+APScheduler>=3.10,<4
+tzdata>=2024.1
+
+# --- Sécurité ---
+argon2-cffi>=23.1
+cryptography>=42
+
+# --- Métier ---
+openpyxl>=3.1
+phonenumbers>=8.13
+requests>=2.31
+qrcode>=7.4
+reportlab>=4.0
+arabic-reshaper>=3.0
+python-bidi>=0.4
+
+# --- Base de données (prod) ---
+psycopg[binary]>=3.1
+
+# --- Serveur de production (Linux / Docker uniquement) ---
+gunicorn>=22.0; sys_platform != "win32"
+gevent>=24.2; sys_platform != "win32"

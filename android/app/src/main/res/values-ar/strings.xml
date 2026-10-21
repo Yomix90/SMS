@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SMS Gateway</string>
+    <string name="channel_service">خدمة البوابة</string>
+    <string name="channel_alerts">تنبيهات</string>
+    <string name="notification_title">%1$s · البوابة نشطة</string>
+
+    <string name="status_connecting">جار الاتصال بالخادم…</string>
+    <string name="status_online">متصل (في الوقت الفعلي)</string>
+    <string name="status_polling">متصل (الوضع الاحتياطي)</string>
+    <string name="status_offline">غير متصل: إعادة المحاولة…</string>
+    <string name="status_unpaired">غير مقترن</string>
+    <string name="status_stopped">الخدمة متوقفة</string>
+    <string name="last_contact">آخر اتصال %1$s</string>
+    <string name="http_warning">اتصال غير مشفر (HTTP): استعمل HTTPS في الإنتاج.</string>
+
+    <string name="blocked_paused">الإرسال متوقف مؤقتا على هذا الهاتف</string>
+    <string name="blocked_disabled">تم تعطيل الجهاز من لوحة التحكم</string>
+    <string name="blocked_battery">بطارية ضعيفة (%1$d %%): الإرسال متوقف إلى حين الشحن</string>
+    <string name="blocked_hour">تم بلوغ الحد بالساعة (%1$d رسالة / ساعة)</string>
+    <string name="blocked_day">تم بلوغ الحد اليومي (%1$d رسالة / يوم)</string>
+
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="resume">استئناف</string>
+    <string name="reconnect">إعادة الاتصال</string>
+    <string name="reconnecting">جار إعادة الاتصال…</string>
+    <string name="paused_log">تم إيقاف الإرسال مؤقتا</string>
+    <string name="resumed_log">تم استئناف الإرسال</string>
+    <string name="stat_sent">المرسلة اليوم</string>
+    <string name="stat_received">الواردة اليوم</string>
+    <string name="stat_queue">في الطابور</string>
+    <string name="journal">السجل</string>
+    <string name="settings">الإعدادات</string>
+
+    <string name="pair_title">اقتران هذا الهاتف</string>
+    <string name="pair_help">في لوحة التحكم، افتح الأجهزة › إضافة جهاز، ثم امسح رمز QR المعروض.</string>
+    <string name="scan_qr">مسح رمز QR</string>
+    <string name="scan_prompt">وجّه الكاميرا نحو رمز QR المعروض في لوحة التحكم</string>
+    <string name="manual_pairing">إدخال يدوي</string>
+    <string name="manual_hint">الصق محتوى «إدخال يدوي» من لوحة التحكم، أو عنوان الخادم متبوعا بالرمز</string>
+    <string name="pair">اقتران</string>
+    <string name="paired_ok">تم الاقتران: %1$s</string>
+    <string name="pairing_failed">فشل الاقتران</string>
+    <string name="err_qr_unknown">هذا الرمز ليس رمز اقتران SMS Gateway.</string>
+    <string name="err_qr_incomplete">رمز QR غير مكتمل: أنشئه من جديد في لوحة التحكم.</string>
+    <string name="err_code_expired">الرمز منتهي الصلاحية أو مستعمل: أنشئ رمز QR جديدا.</string>
+    <string name="err_server">رفض الخادم الاقتران.</string>
+    <string name="err_unreachable">تعذر الوصول إلى الخادم: تحقق من العنوان ومن اتصال الهاتف بالإنترنت.</string>
+
+    <string name="permissions_missing">أذونات الرسائل / الهاتف غير ممنوحة: لا يمكن للبوابة أن تعمل.</string>
+    <string name="grant">منح الأذونات</string>
+    <string name="battery_warning">قد يوقف تحسين البطارية البوابة عند إطفاء الشاشة. استثن التطبيق ليعمل على مدار الساعة.</string>
+    <string name="disable_optimization">تعطيل تحسين البطارية</string>
+    <string name="hint_xiaomi">Xiaomi: الإعدادات › التطبيقات › SMS Gateway › التشغيل التلقائي (تفعيل) وموفر البطارية › بدون قيود.</string>
+    <string name="hint_huawei">Huawei: الإعدادات › البطارية › تشغيل التطبيقات › SMS Gateway › الإدارة اليدوية (تفعيل الكل).</string>
+    <string name="hint_oppo">Oppo / Realme: الإعدادات › البطارية › السماح بالنشاط في الخلفية والتشغيل التلقائي.</string>
+    <string name="hint_samsung">Samsung: الإعدادات › البطارية › حدود الاستخدام في الخلفية › إزالة SMS Gateway من التطبيقات النائمة.</string>
+    <string name="hint_vivo">Vivo: الإعدادات › البطارية › الاستهلاك المرتفع في الخلفية › السماح لـ SMS Gateway.</string>
+
+    <string name="section_server">الخادم</string>
+    <string name="server_url">عنوان الخادم</string>
+    <string name="device_name">اسم الجهاز</string>
+    <string name="limits">حدود الإرسال</string>
+    <string name="limits_value">رسالة كل %1$d ث · %2$d / ساعة · %3$d / يوم</string>
+    <string name="limits_help">تُعدّل هذه الحدود من لوحة التحكم (الأجهزة) وتُطبق تلقائيا.</string>
+    <string name="enabled_yes">الإرسال مسموح من طرف الخادم</string>
+    <string name="enabled_no">الإرسال معطل من لوحة التحكم</string>
+    <string name="section_sim">الشرائح</string>
+    <string name="sim_help">★ = شريحة الإرسال الافتراضية (تُضبط من لوحة التحكم). يمكن لكل رسالة أيضا فرض شريحة معينة.</string>
+    <string name="no_sim_info">لم يتم اكتشاف أي شريحة (أو تم رفض إذن الهاتف)</string>
+    <string name="section_battery">البطارية والخلفية</string>
+    <string name="min_battery">عدم الإرسال تحت هذا المستوى من البطارية (إلا أثناء الشحن)</string>
+    <string name="min_battery_value">%1$d %%</string>
+    <string name="min_battery_off">معطل</string>
+    <string name="battery_unrestricted">✓ تحسين البطارية معطل</string>
+    <string name="battery_restricted">⚠ تحسين البطارية مفعل: خطر التوقف في الخلفية</string>
+    <string name="app_settings">إعدادات التطبيق</string>
+    <string name="notification_settings">الإشعارات</string>
+    <string name="unpair">إلغاء الاقتران</string>
+    <string name="unpair_confirm">سيتوقف الهاتف عن إرسال واستقبال الرسائل لفائدة الخادم. سيتعين مسح رمز QR جديد.</string>
+    <string name="version_label">الإصدار %1$s</string>
+
+    <string name="alert_revoked_title">تم فصل الجهاز عن الخادم</string>
+    <string name="alert_revoked_text">تم إلغاء الرمز أو تجديده من لوحة التحكم. افتح التطبيق وامسح رمز QR جديدا.</string>
+</resources>

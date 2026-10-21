@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% from "_macros.html" import post_button, device_select, sim_select %}
+{% block title %}{{ _("Boîte de réception") }}{% endblock %}
+{% block body_class %}app page-inbox{% endblock %}
+{% block content %}
+{% set a = request.args %}
+<div class="inbox {{ 'has-thread' if conv }}">
+  <div class="inbox-list">
+    <div class="search">
+      <form method="get" class="d-flex gap-2 mb-2">
+        <input type="hidden" name="view" value="{{ a.get('view', 'all') }}">
+        <input class="form-control form-control-sm" name="q" value="{{ a.get('q', '') }}" placeholder="{{ _('Rechercher (nom, numéro, texte)…') }}">
+      </form>
+      <div class="d-flex gap-1 flex-wrap">
+        {% for key, label in [("all", _("Toutes")), ("unread", _("Non lues")), ("archived", _("Archivées"))] %}
+        <a class="btn btn-sm {{ 'btn-primary' if a.get('view', 'all') == key and not a.get('label') else 'btn-light' }}" href="{{ url_for('web.inbox', view=key) }}">{{ label }}</a>
+        {% endfor %}
+        <div class="dropdown ms-auto">
+          <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown"><i class="bi bi-tag"></i></button>
+          <div class="dropdown-menu dropdown-menu-end p-2" style="min-width:220px">
+            {% for l in labels %}
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <a class="dropdown-item rounded px-2 py-1 {{ 'active' if a.get('label') == l.id|string }}" href="{{ url_for('web.inbox', label=l.id) }}"><span class="badge" style="background:{{ l.color }}">{{ l.name }}</span></a>
+              {{ post_button(url_for('web.label_delete', lid=l.id), None, "x", "btn-sm btn-link text-danger p-0", confirm=True) }}
+            </div>
+            {% endfor %}
+            <form method="post" action="{{ url_for('web.label_create') }}" class="d-flex gap-1 mt-2">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input class="form-control form-control-sm" name="name" placeholder="{{ _('Nouvelle étiquette') }}" required>
+              <input class="form-control form-control-sm form-control-color" type="color" name="color" value="#6c757d">
+              <button class="btn btn-sm btn-primary"><i class="bi bi-plus"></i></button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="conv-items" id="conv-items">{% set current = conv.id if conv else none %}{% include "inbox/_list.html" %}</div>
+  </div>
+
+  <div class="thread">
+    {% if conv %}
+    <div class="thread-header">
+      <a class="btn btn-sm btn-light d-md-none" href="{{ url_for('web.inbox') }}"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <div class="fw-semibold">{% if conv.contact %}<a class="text-reset" href="{{ url_for('web.contact_detail', uid=conv.contact.uuid) }}">{{ conv.contact.full_name or conv.phone|phone }}</a>{% else %}{{ conv.phone|phone }}{% endif %}</div>
+        <div class="small text-body-secondary phone">{{ conv.phone|phone }}</div>
+      </div>
+      <div class="ms-auto d-flex gap-1 flex-wrap">
+        <form method="post" action="{{ url_for('web.inbox_labels', cid=conv.id) }}" class="dropdown">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside"><i class="bi bi-tags"></i>
+            {% for l in conv.labels %}<span class="badge" style="background:{{ l.color }}">{{ l.name }}</span>{% endfor %}</button>
+          <div class="dropdown-menu dropdown-menu-end p-2">
+            {% for l in labels %}
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="labels" value="{{ l.id }}" id="lb{{ l.id }}" {{ 'checked' if l in conv.labels }}>
+              <label class="form-check-label" for="lb{{ l.id }}">{{ l.name }}</label></div>
+            {% else %}<div class="small text-body-secondary">{{ _("Créez une étiquette depuis le menu de gauche.") }}</div>{% endfor %}
+            {% if labels %}<button class="btn btn-sm btn-primary w-100 mt-2" type="submit">{{ _("Appliquer") }}</button>{% endif %}
+          </div>
+        </form>
+        {{ post_button(url_for('web.inbox_unread', cid=conv.id), None, "envelope", "btn-sm btn-light", title=_("Marquer non lu")) }}
+        {{ post_button(url_for('web.inbox_archive', cid=conv.id), None, "archive" if not conv.is_archived else "box-arrow-up", "btn-sm btn-light", title=_("Archiver") if not conv.is_archived else _("Restaurer")) }}
+      </div>
+    </div>
+    <div class="thread-body" id="thread-body">{% include "inbox/_thread.html" %}</div>
+    <form class="thread-reply" method="post" action="{{ url_for('web.inbox_reply', cid=conv.id) }}" id="reply-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="sms-editor">
+        <div class="d-flex gap-2 align-items-end">
+          <textarea class="form-control sms-input" name="body" id="reply-body" rows="2" maxlength="1600" required dir="auto"
+                    placeholder="{{ _('Votre réponse…') }}" data-sms-counter="#reply-counter"></textarea>
+          <button class="btn btn-primary" type="submit" title="{{ _('Envoyer') }}"><i class="bi bi-send"></i></button>
+        </div>
+        <div class="d-flex flex-wrap gap-2 align-items-center mt-1">
+          <div class="sms-counter flex-grow-1" id="reply-counter"></div>
+          <div style="max-width:220px">{{ device_select(devices, last_in.device.uuid|string if last_in and last_in.device else None) }}</div>
+          <div style="max-width:130px">{{ sim_select(last_in.sim_slot if last_in else None) }}</div>
+        </div>
+        <div class="kbd-hint mt-1">{{ _("Ctrl + Entrée pour envoyer · la réponse part par le téléphone qui a reçu le dernier SMS") }}</div>
+      </div>
+    </form>
+    {% else %}
+    <div class="empty-state my-auto"><i class="bi bi-chat-dots"></i><h3>{{ _("Sélectionnez une conversation") }}</h3>
+      <p>{{ _("Les SMS reçus par vos téléphones apparaissent ici en temps réel.") }}</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var convId = {{ (conv.id if conv else none)|tojson }};
+  var body = document.getElementById("thread-body");
+  function scrollBottom() { if (body) body.scrollTop = body.scrollHeight; }
+  scrollBottom();
+  function reloadList() {
+    var params = new URLSearchParams(location.search);
+    fetch("{{ url_for('web.inbox_list_partial') }}?" + params.toString()).then(function (r) { return r.text(); })
+      .then(function (html) { document.getElementById("conv-items").innerHTML = html; });
+  }
+  function reloadThread() {
+    if (!convId) return;
+    fetch("/inbox/" + convId + "/thread").then(function (r) { return r.text(); })
+      .then(function (html) { body.innerHTML = html; scrollBottom(); });
+  }
+  document.addEventListener("app:inbox", function (e) {
+    reloadList();
+    if (convId && e.detail.conversation_id === convId) { reloadThread(); }
+  });
+  document.addEventListener("app:message.new", function (e) {
+    if (convId && e.detail.conversation_id === convId) reloadThread();
+  });
+  var form = document.getElementById("reply-form");
+  if (form) {
+    var ta = document.getElementById("reply-body");
+    ta.addEventListener("keydown", function (e) { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) form.requestSubmit(); });
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      APP.postHtml(form.action, new FormData(form)).then(function (html) {
+        body.innerHTML = html; ta.value = ""; ta.dispatchEvent(new Event("input")); scrollBottom(); reloadList();
+      }).catch(function () { form.submit(); });
+    });
+  }
+})();
+</script>
+{% endblock %}

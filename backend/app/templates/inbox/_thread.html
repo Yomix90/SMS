@@ -1,0 +1,13 @@
+{% set ns = namespace(day=None) %}
+{% for m in thread %}
+  {% set day = (m.received_at or m.created_at)|dt("%d/%m/%Y") %}
+  {% if day != ns.day %}{% set ns.day = day %}<div class="text-center small text-body-secondary my-2"><span class="badge text-bg-light border">{{ day }}</span></div>{% endif %}
+  <div class="thread-msg {{ m.direction }}" data-message-id="{{ m.uuid }}">
+    <div class="bubble {{ m.direction }}" dir="auto">{{ m.body }}</div>
+    <div class="info">{{ (m.received_at or m.created_at)|dt("%H:%M") }}
+      {% if m.direction == 'out' %}· <span class="status-cell">{{ status_badge(m.status) }}</span>{% if m.source == 'auto_reply' %} · <i class="bi bi-robot" title="{{ _('Réponse automatique') }}"></i>{% endif %}{% endif %}
+      {% if m.sim_slot is not none %}· SIM {{ m.sim_slot + 1 }}{% endif %}</div>
+  </div>
+{% else %}
+<div class="text-center text-body-secondary my-auto">{{ _("Aucun message.") }}</div>
+{% endfor %}

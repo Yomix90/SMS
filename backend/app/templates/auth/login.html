@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ _("Connexion") }}{% endblock %}
+{% block body_class %}login{% endblock %}
+{% block body %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="text-center text-white mb-4">
+      <span class="brand-mark d-inline-grid mb-2" style="width:52px;height:52px;font-size:1.5rem"><i class="bi bi-broadcast"></i></span>
+      <h1 class="h4 fw-bold mb-1">SMS Gateway</h1>
+      <p class="opacity-75 small mb-0">{{ _("Votre téléphone Android, votre passerelle SMS") }}</p>
+    </div>
+    <div class="card shadow-lg">
+      <div class="card-body p-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}<div class="alert alert-{{ category }} py-2 small">{{ message }}</div>{% endfor %}
+        {% endwith %}
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label class="form-label" for="email">{{ _("Email") }}</label>
+            <input class="form-control form-control-lg" type="email" id="email" name="email" value="{{ email or '' }}" required autofocus autocomplete="username" dir="ltr">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">{{ _("Mot de passe") }}</label>
+            <input class="form-control form-control-lg" type="password" id="password" name="password" required autocomplete="current-password">
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" name="remember" id="remember">
+            <label class="form-check-label" for="remember">{{ _("Rester connecté") }}</label>
+          </div>
+          <button class="btn btn-primary btn-lg w-100" type="submit">{{ _("Se connecter") }}</button>
+        </form>
+      </div>
+    </div>
+    <div class="text-center mt-3">
+      <a class="link-light small" href="{{ url_for('web.set_language', code='ar' if current_lang == 'fr' else 'fr', next=request.full_path.rstrip('?')) }}">
+        {{ "العربية" if current_lang == "fr" else "Français" }}</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

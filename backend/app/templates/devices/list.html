@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import battery, empty_state %}
+{% block title %}{{ _("Appareils") }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <p class="text-body-secondary mb-0">{{ _("Chaque téléphone Android appairé envoie et reçoit les SMS avec sa carte SIM.") }}</p>
+  {% if current_user.is_admin %}
+  <button class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#pairModal"><i class="bi bi-qr-code"></i> {{ _("Ajouter un appareil") }}</button>
+  {% endif %}
+</div>
+
+{% if devices %}
+<div class="row g-3">
+  {% for d in devices %}
+  <div class="col-md-6 col-xxl-4">
+    <div class="card h-100" data-device-id="{{ d.uuid }}">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-3">
+          <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-phone"></i></div>
+          <div class="flex-grow-1 min-w-0">
+            <a class="fw-semibold fs-6 text-reset text-decoration-none" href="{{ url_for('web.device_detail', uid=d.uuid) }}">{{ d.name }}</a>
+            <div class="small text-body-secondary">{{ d.manufacturer or "" }} {{ d.model or "" }}{% if d.android_version %} · Android {{ d.android_version }}{% endif %}</div>
+          </div>
+          <span data-field="status">{{ status_badge(d.status) }}</span>
+        </div>
+        <div class="row text-center g-2 mt-3 small">
+          <div class="col-4"><div class="text-body-secondary">{{ _("Batterie") }}</div><div data-field="battery">{{ battery(d.battery_level, d.is_charging) }}</div></div>
+          <div class="col-4"><div class="text-body-secondary">{{ _("Aujourd'hui") }}</div><div class="fw-semibold">{{ usage[d.id].today }}/{{ d.max_per_day }}</div></div>
+          <div class="col-4"><div class="text-body-secondary">{{ _("Dernière heure") }}</div><div class="fw-semibold">{{ usage[d.id].last_hour }}/{{ d.max_per_hour }}</div></div>
+        </div>
+        <div class="d-flex flex-wrap gap-1 mt-3">
+          {% for s in d.sims %}
+          <span class="badge {{ 'text-bg-primary' if s.slot_index == d.default_sim_slot else 'text-bg-light border' }}">
+            SIM {{ s.slot_index + 1 }}{% if s.carrier %} · {{ s.carrier }}{% endif %}{% if s.phone_number %} · <span class="phone">{{ s.phone_number|phone }}</span>{% endif %}</span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card-footer bg-transparent small text-body-secondary d-flex justify-content-between">
+        <span><i class="bi bi-activity"></i> {{ d.last_seen_at|ago }}</span>
+        <span>{{ _("1 SMS / {n} s", n=d.send_interval_sec) }}</span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card">
+  {% call empty_state("phone", _("Aucun appareil"), _("Installez l'application Android sur le téléphone, puis scannez le QR code d'appairage.")) %}
+    {% if current_user.is_admin %}<button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#pairModal"><i class="bi bi-qr-code"></i> {{ _("Ajouter un appareil") }}</button>{% endif %}
+  {% endcall %}
+</div>
+{% endif %}
+
+{% if revoked %}
+<h2 class="h6 mt-4 text-body-secondary">{{ _("Appareils révoqués") }}</h2>
+<ul class="list-group">
+  {% for d in revoked %}<li class="list-group-item d-flex justify-content-between"><span>{{ d.name }}</span><a href="{{ url_for('web.device_detail', uid=d.uuid) }}">{{ _("Détails") }}</a></li>{% endfor %}
+</ul>
+{% endif %}
+
+{% include "devices/_pair_modal.html" %}
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_macros.html" import sms_textarea %}
+{% block title %}{{ _("Modifier le modèle") if tpl else _("Nouveau modèle") }}{% endblock %}
+{% block content %}
+<a class="small text-decoration-none" href="{{ url_for('web.templates_list') }}"><i class="bi bi-arrow-left"></i> {{ _("Modèles") }}</a>
+<form method="post" class="row g-4 mt-1">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="col-lg-7">
+    <div class="card"><div class="card-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-6"><label class="form-label">{{ _("Nom") }}</label><input class="form-control" name="name" value="{{ form.name or '' }}" required maxlength="120"></div>
+        <div class="col-6 col-md-3"><label class="form-label">{{ _("Langue") }}</label>
+          <select class="form-select" name="language" id="language">
+            <option value="fr" {{ 'selected' if form.language == 'fr' }}>Français</option>
+            <option value="ar" {{ 'selected' if form.language == 'ar' }}>العربية</option></select></div>
+        <div class="col-6 col-md-3"><label class="form-label">{{ _("Catégorie") }}</label>
+          <select class="form-select" name="category">{% for c in categories %}<option value="{{ c }}" {{ 'selected' if form.category == c }}>{{ _(labels[c]) }}</option>{% endfor %}</select></div>
+      </div>
+      <label class="form-label">{{ _("Texte") }}</label>
+      {{ sms_textarea(value=form.body or "", rows=7, variables=["prenom", "nom", "montant", "date_echeance", "reference", "telephone"]) }}
+      <div class="form-text">{{ _("Toute colonne d'un fichier importé est aussi utilisable : {ville}, {agence}…") }}</div>
+      {% if tpl %}<div class="form-check form-switch mt-3"><input class="form-check-input" type="checkbox" name="is_active" id="is_active" {{ 'checked' if form.is_active }}><label class="form-check-label" for="is_active">{{ _("Actif") }}</label></div>{% endif %}
+      <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-check2"></i> {{ _("Enregistrer") }}</button>
+    </div></div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card"><div class="card-header"><i class="bi bi-eye"></i>{{ _("Aperçu avec des données d'exemple") }}</div>
+      <div class="card-body"><div class="phone-preview"><div class="d-flex flex-column align-items-end"><div class="bubble out" id="tpl-preview" dir="auto">…</div></div></div>
+        <div class="small text-warning mt-2" id="tpl-missing"></div></div></div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var body = document.getElementById("body"), out = document.getElementById("tpl-preview"), miss = document.getElementById("tpl-missing"), timer;
+  var unknown = {{ _("Variables sans valeur d'exemple :")|tojson }};
+  function refresh() {
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+      APP.post("{{ url_for('web.template_preview') }}", { body: body.value }).then(function (d) {
+        out.textContent = d.text || "…";
+        miss.textContent = d.missing.length ? unknown + " " + d.missing.map(function (v) { return "{" + v + "}"; }).join(", ") : "";
+      });
+    }, 250);
+  }
+  body.addEventListener("input", refresh); refresh();
+  document.getElementById("language").addEventListener("change", function (e) { body.dir = e.target.value === "ar" ? "rtl" : "auto"; });
+})();
+</script>
+{% endblock %}

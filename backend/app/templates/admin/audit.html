@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import pagination %}
+{% block title %}{{ _("Journal d'audit") }}{% endblock %}
+{% block content %}
+<form class="toolbar" method="get">
+  <input class="form-control form-control-sm w-auto" name="action" value="{{ request.args.get('action', '') }}" placeholder="{{ _('Action (ex. campaign, login)') }}">
+  <select class="form-select form-select-sm w-auto" name="user" data-autosubmit><option value="">{{ _("Tous les utilisateurs") }}</option>
+    {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if request.args.get('user') == u.id|string }}>{{ u.email }}</option>{% endfor %}</select>
+  <button class="btn btn-sm btn-light" type="submit"><i class="bi bi-search"></i></button>
+</form>
+<div class="card"><div class="table-responsive"><table class="table align-middle small">
+  <thead><tr><th>{{ _("Date") }}</th><th>{{ _("Auteur") }}</th><th>{{ _("Action") }}</th><th>{{ _("Objet") }}</th><th>{{ _("Détails") }}</th><th>IP</th></tr></thead>
+  <tbody>
+  {% for log in page.items %}
+    <tr>
+      <td class="text-nowrap">{{ log.created_at|dt("%d/%m/%Y %H:%M:%S") }}</td>
+      <td>{% if log.user %}{{ log.user.email }}{% elif log.api_key %}<i class="bi bi-key"></i> {{ log.api_key.name }}{% else %}<span class="text-body-secondary">{{ _("système") }}</span>{% endif %}</td>
+      <td><code>{{ log.action }}</code></td>
+      <td class="text-body-secondary">{{ log.entity_type or "" }}{% if log.entity_id %} #{{ log.entity_id }}{% endif %}</td>
+      <td class="text-body-secondary text-truncate" style="max-width:320px" dir="ltr">{{ log.details|tojson if log.details else "" }}</td>
+      <td class="text-body-secondary">{{ log.ip or "" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+<div class="card-body pt-0">{{ pagination(page, 'web.admin_audit') }}</div></div>
+{% endblock %}
