@@ -34,7 +34,7 @@ services:
       APP_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-sms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sms}
       PUBLIC_BASE_URL: https://${DOMAIN:?Variable DOMAIN requise (ex. sms.exemple.ma)}
-      SECRET_KEY: ${SECRET_KEY:?Variable SECRET_KEY requise (64 caractères aléatoires)}
+      SECRET_KEY: ${SECRET_KEY:-}            # facultatif : générée et conservée dans le volume si absente
       APP_ENCRYPTION_KEYS: ${APP_ENCRYPTION_KEYS:?Variable APP_ENCRYPTION_KEYS requise (clé Fernet)}
       SESSION_COOKIE_SECURE: "true"
       TIMEZONE: Africa/Casablanca

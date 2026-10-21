@@ -100,19 +100,62 @@ def create_app(config_name: str | None = None) -> Flask:
     return app
 
 
+WEAK_SECRETS = {"", "dev-insecure-change-me", "change-me", "changeme", "secret"}
+
+
+def _persistent_secret_key(app) -> str:
+    """SECRET_KEY absente : clé aléatoire générée une fois et conservée dans instance/
+    (volume Docker), pour que les sessions survivent aux redémarrages."""
+    import secrets
+    path = Path(app.instance_path) / "secret_key"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and len(path.read_text().strip()) >= 32:
+        return path.read_text().strip()
+    key = secrets.token_hex(32)
+    path.write_text(key)
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+    return key
+
+
 def _check_production_secrets(app) -> None:
-    """Refuse de démarrer en production avec des secrets absents ou laissés par défaut."""
+    """Refuse de démarrer en production avec des secrets faibles ; message précis sur la cause."""
     if app.debug or app.testing or os.environ.get("APP_ENV") != "production":
         return
+    log = logging.getLogger(__name__)
     problems = []
-    if app.config["SECRET_KEY"] in ("", "dev-insecure-change-me", "change-me") or len(app.config["SECRET_KEY"]) < 32:
-        problems.append("SECRET_KEY")
-    if not app.config.get("APP_ENCRYPTION_KEYS") or "change-me" in app.config["APP_ENCRYPTION_KEYS"]:
-        problems.append("APP_ENCRYPTION_KEYS")
+
+    if not (os.environ.get("SECRET_KEY") or "").strip():
+        app.config["SECRET_KEY"] = _persistent_secret_key(app)
+        log.warning("SECRET_KEY absente de l'environnement : clé générée et conservée dans instance/secret_key")
+    key = app.config["SECRET_KEY"]
+    if key in WEAK_SECRETS:
+        problems.append("SECRET_KEY (valeur par défaut, remplacez-la par 64 caractères aléatoires)")
+    elif len(key) < 32:
+        problems.append(f"SECRET_KEY (trop courte : {len(key)} caractères reçus, 32 minimum ; "
+                        "vérifiez qu'elle n'a pas été tronquée lors du copier-coller)")
+
+    enc = app.config.get("APP_ENCRYPTION_KEYS") or ""
+    if not enc:
+        problems.append("APP_ENCRYPTION_KEYS (absente)")
+    elif "change-me" in enc:
+        problems.append("APP_ENCRYPTION_KEYS (valeur par défaut)")
+    else:
+        from cryptography.fernet import Fernet
+        for k in (x.strip() for x in enc.split(",") if x.strip()):
+            try:
+                Fernet(k.encode())
+            except (ValueError, TypeError):
+                problems.append(f"APP_ENCRYPTION_KEYS (clé Fernet invalide de {len(k)} caractères : "
+                                "attendu 44 caractères base64 « URL-safe »)")
+                break
+
     if not app.config["PUBLIC_BASE_URL"].startswith("https://"):
-        problems.append("PUBLIC_BASE_URL (https requis)")
+        problems.append(f"PUBLIC_BASE_URL ({app.config['PUBLIC_BASE_URL']!r} : https requis, vérifiez DOMAIN)")
     if problems:
-        raise RuntimeError("Configuration de production invalide : " + ", ".join(problems))
+        raise RuntimeError("Configuration de production invalide : " + " ; ".join(problems))
 
 
 def _should_start_scheduler(app) -> bool:

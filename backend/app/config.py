@@ -5,6 +5,15 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+def _secret(name: str, default: str = "") -> str:
+    """Lit un secret en retirant espaces, retours à la ligne et guillemets copiés par erreur
+    depuis l'interface d'une plateforme (ex. "abc…" ou 'abc…')."""
+    value = (os.environ.get(name) or "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        value = value[1:-1].strip()
+    return value or default
+
+
 def _bool(name: str, default: bool = False) -> bool:
     return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
@@ -20,14 +29,14 @@ def _db_url() -> str:
 
 
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-insecure-change-me")
+    SECRET_KEY = _secret("SECRET_KEY", "dev-insecure-change-me")
     SQLALCHEMY_DATABASE_URI = _db_url()
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Clés Fernet (base64 32 octets) séparées par des virgules ; la première chiffre,
     # toutes déchiffrent (rotation). Générer : python -c "from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())"
-    APP_ENCRYPTION_KEYS = os.environ.get("APP_ENCRYPTION_KEYS", "")
+    APP_ENCRYPTION_KEYS = _secret("APP_ENCRYPTION_KEYS")
 
     PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://localhost:5000").rstrip("/")
     TIMEZONE = os.environ.get("TIMEZONE", "Africa/Casablanca")
