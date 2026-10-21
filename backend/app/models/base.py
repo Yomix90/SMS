@@ -1,5 +1,5 @@
 """Types et mixins communs aux modèles."""
-import uuid
+import uuid as uuidlib
 from datetime import datetime, timezone
 
 import sqlalchemy as sa
@@ -53,4 +53,4 @@ class TimestampMixin:
 class PublicIdMixin:
     """UUID public exposé par l'API (l'id entier reste interne)."""
 
-    uuid: Mapped[uuid.UUID] = mapped_column(sa.Uuid, default=uuid.uuid4, unique=True, nullable=False)
+    uuid: Mapped[uuidlib.UUID] = mapped_column(sa.Uuid, default=uuidlib.uuid4, unique=True, nullable=False)

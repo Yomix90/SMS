@@ -1,5 +1,5 @@
 """Webhooks sortants et journal des livraisons."""
-import uuid
+import uuid as uuidlib
 from datetime import datetime
 
 import sqlalchemy as sa
@@ -41,7 +41,7 @@ class WebhookDelivery(db.Model):
     id: Mapped[int] = mapped_column(BigIntPK, primary_key=True)
     webhook_id: Mapped[int] = mapped_column(sa.ForeignKey("webhooks.id", ondelete="CASCADE"), nullable=False)
     event: Mapped[str] = mapped_column(sa.String(40), nullable=False)
-    event_id: Mapped[uuid.UUID] = mapped_column(sa.Uuid, default=uuid.uuid4, nullable=False)
+    event_id: Mapped[uuidlib.UUID] = mapped_column(sa.Uuid, default=uuidlib.uuid4, nullable=False)
     payload: Mapped[dict] = mapped_column(JSONType, nullable=False)
     status: Mapped[str] = mapped_column(sa.String(10), default=DELIVERY_PENDING, nullable=False)
     attempts: Mapped[int] = mapped_column(sa.SmallInteger, default=0, nullable=False)
