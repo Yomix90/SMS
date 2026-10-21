@@ -1,0 +1,74 @@
+# SMS Gateway — déploiement via une plateforme (Dokploy, Coolify, Portainer, CapRover…)
+#
+# La plateforme fournit le domaine, le HTTPS et le reverse proxy (Traefik) : ce fichier ne
+# contient donc ni Nginx ni Certbot. Dans l'interface de la plateforme :
+#   1. Variables d'environnement : DOMAIN, POSTGRES_PASSWORD, SECRET_KEY, APP_ENCRYPTION_KEYS
+#      (voir la liste plus bas et docs/deploiement-vps.md §9) ;
+#   2. Domaine : associer votre domaine au service « web », port 8000, HTTPS activé ;
+#      les WebSockets (/socket.io/) doivent être autorisés (c'est le cas par défaut avec Traefik).
+#
+# Serveur nu sans plateforme : utilisez plutôt deploy/docker-compose.yml (Nginx + Let's Encrypt inclus).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sms}
+      POSTGRES_USER: ${POSTGRES_USER:-sms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Variable POSTGRES_PASSWORD requise}
+      TZ: Africa/Casablanca
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sms}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-sms}
+      PUBLIC_BASE_URL: https://${DOMAIN:?Variable DOMAIN requise (ex. sms.exemple.ma)}
+      SECRET_KEY: ${SECRET_KEY:?Variable SECRET_KEY requise (64 caractères aléatoires)}
+      APP_ENCRYPTION_KEYS: ${APP_ENCRYPTION_KEYS:?Variable APP_ENCRYPTION_KEYS requise (clé Fernet)}
+      SESSION_COOKIE_SECURE: "true"
+      TIMEZONE: Africa/Casablanca
+      TZ: Africa/Casablanca
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - instance:/app/instance
+    expose:
+      - "8000"
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-sms}
+      PGUSER: ${POSTGRES_USER:-sms}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_TIME: ${BACKUP_TIME:-02:30}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      TZ: Africa/Casablanca
+    volumes:
+      - ./deploy/backup/backup.sh:/usr/local/bin/backup.sh:ro
+      - backups:/backups
+    entrypoint: ["/bin/sh", "/usr/local/bin/backup.sh", "loop"]
+
+volumes:
+  pgdata:
+  instance:
+  backups:

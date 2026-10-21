@@ -235,3 +235,27 @@ deploy/
 ├── nginx/snippets/                TLS, en-têtes de sécurité, en-têtes proxy
 └── downloads/                     APK Android servi en HTTPS
 ```
+
+## 9. Variante : plateforme de déploiement (Dokploy, Coolify, Portainer…)
+
+Si votre serveur est géré par une plateforme qui fournit déjà le domaine et le HTTPS (Traefik), utilisez le fichier **`docker-compose.yml` à la racine du dépôt**, et non `deploy/docker-compose.yml`. Celui de `deploy/` lance son propre Nginx sur les ports 80 et 443, ce qui entre en conflit avec le proxy de la plateforme.
+
+1. Créez un service **Docker Compose** à partir du dépôt Git `https://github.com/Yomix90/SMS`, branche `main`, chemin du compose `./docker-compose.yml`.
+2. Ajoutez les **variables d'environnement** :
+
+   | Variable | Valeur |
+   |---|---|
+   | `DOMAIN` | `sms.votre-entreprise.ma`, sans `https://` |
+   | `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
+   | `SECRET_KEY` | `openssl rand -hex 32` |
+   | `APP_ENCRYPTION_KEYS` | `openssl rand -base64 32 \| tr '+/' '-_'` |
+
+   Conservez une copie de ces valeurs hors du serveur.
+3. **Domaine** : associez votre domaine au service `web`, **port 8000**, HTTPS (Let's Encrypt) activé.
+4. Déployez, puis créez l'administrateur depuis le terminal du conteneur `web` :
+
+   ```bash
+   python manage.py create-admin --email vous@votre-entreprise.ma
+   ```
+
+5. Les sauvegardes quotidiennes sont écrites dans le volume `backups` ; pensez à les copier hors site.
