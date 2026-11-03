@@ -36,9 +36,20 @@ class GatewayRepository(context: Context) {
             if (inserted) {
                 log.info("Tâche reçue → ${sms.phone}")
             } else {
-                // Déjà connu (renvoi après coupure) : on ré-annonce le statut final éventuel
-                db.outgoing().get(id)?.let { existing ->
-                    if (existing.status in FINAL_REPORTABLE) report(existing.id, existing.status, existing.errorCode)
+                val existing = db.outgoing().get(id)
+                when {
+                    existing == null -> Unit
+                    // Échec précédent : c'est une relance du serveur, on renvoie réellement le SMS.
+                    // Après une erreur modem, le renvoi se fait sans accusé de livraison (certains
+                    // modems / opérateurs refusent la demande d'accusé).
+                    existing.status == OutStatus.FAILED || existing.status == OutStatus.CANCELED -> {
+                        val withReport = existing.withDeliveryReport && existing.errorCode !in MODEM_ERRORS
+                        db.outgoing().resetForRetry(id, withReport)
+                        log.info("Nouvelle tentative → ${existing.phone}" +
+                            if (!withReport) " (sans accusé de livraison)" else "")
+                    }
+                    // Déjà envoyé (lot renvoyé après coupure) : on ré-annonce simplement le statut
+                    existing.status in FINAL_REPORTABLE -> report(existing.id, existing.status, existing.errorCode)
                 }
             }
             ids += id
@@ -63,13 +74,15 @@ class GatewayRepository(context: Context) {
     }
 
     /** Accusé d'envoi d'un segment. */
-    suspend fun onPartSent(id: String, total: Int, errorCode: String?) {
+    suspend fun onPartSent(id: String, total: Int, errorCode: String?, detail: String? = null) {
         val sms = db.outgoing().get(id) ?: return
         if (sms.status != OutStatus.SENDING) return
         if (errorCode != null) {
             db.outgoing().setStatus(id, OutStatus.FAILED, errorCode)
-            report(id, "failed", errorCode, simSlot = sms.simSlot)
-            log.error("Échec d'envoi vers ${sms.phone} ($errorCode)")
+            report(id, "failed", errorCode, detail, simSlot = sms.simSlot)
+            val hint = if (errorCode in MODEM_ERRORS && sms.withDeliveryReport)
+                " : nouvelle tentative sans accusé de livraison" else ""
+            log.error("Échec d'envoi vers ${sms.phone} ($errorCode, $detail, SIM ${(sms.simSlot ?: 0) + 1}, tentative ${sms.attempts})$hint")
             return
         }
         db.outgoing().incPartsSent(id)
@@ -126,5 +139,6 @@ class GatewayRepository(context: Context) {
 
     private companion object {
         val FINAL_REPORTABLE = setOf(OutStatus.SENT, OutStatus.DELIVERED, OutStatus.FAILED, OutStatus.CANCELED)
+        val MODEM_ERRORS = setOf("MODEM_ERROR", "GENERIC_FAILURE", "NETWORK_ERROR")
     }
 }

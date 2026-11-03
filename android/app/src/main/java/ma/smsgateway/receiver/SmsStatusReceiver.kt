@@ -19,12 +19,15 @@ class SmsStatusReceiver : BroadcastReceiver() {
         val id = intent.getStringExtra(EXTRA_ID) ?: return
         val total = intent.getIntExtra(EXTRA_TOTAL, 1)
         val resultCode = resultCode
+        // Code détaillé du modem / RIL (diagnostic des erreurs MODEM_ERROR, GENERIC_FAILURE…)
+        val rilCode = intent.getIntExtra("errorCode", -1)
         val pending = goAsync()
         scope.launch {
             try {
                 val repo = GatewayRepository(context)
                 when (intent.action) {
-                    ACTION_SENT -> repo.onPartSent(id, total, ErrorCodes.fromSentResult(resultCode))
+                    ACTION_SENT -> repo.onPartSent(id, total, ErrorCodes.fromSentResult(resultCode),
+                        "resultCode=$resultCode" + if (rilCode >= 0) ", errorCode=$rilCode" else "")
                     ACTION_DELIVERED -> {
                         val status = deliveryStatus(intent)
                         // 32..63 : l'opérateur réessaie encore, on attend l'accusé final

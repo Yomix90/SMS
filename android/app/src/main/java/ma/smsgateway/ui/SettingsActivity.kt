@@ -36,6 +36,12 @@ class SettingsActivity : AppCompatActivity() {
             binding.minBatteryLabel.text = batteryLabel(value.toInt())
         }
 
+        binding.deliveryReports.isChecked = prefs.deliveryReports
+        binding.deliveryReports.setOnCheckedChangeListener { _, checked ->
+            prefs.deliveryReports = checked
+            App.from(this).log.info(if (checked) "Accusés de livraison activés" else "Accusés de livraison désactivés")
+        }
+
         binding.btnBattery.setOnClickListener {
             runCatching { startActivity(Permissions.batteryOptimizationIntent(this)) }
                 .onFailure { startActivity(Permissions.appSettingsIntent(this)) }

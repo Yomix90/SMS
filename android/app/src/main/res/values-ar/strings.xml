@@ -68,6 +68,9 @@
     <string name="section_sim">الشرائح</string>
     <string name="sim_help">★ = شريحة الإرسال الافتراضية (تُضبط من لوحة التحكم). يمكن لكل رسالة أيضا فرض شريحة معينة.</string>
     <string name="no_sim_info">لم يتم اكتشاف أي شريحة (أو تم رفض إذن الهاتف)</string>
+    <string name="section_sending">الإرسال</string>
+    <string name="delivery_reports">طلب إشعارات التسليم</string>
+    <string name="delivery_reports_help">يتيح حالة «مستلم» في لوحة التحكم. إذا فشل الإرسال بخطأ MODEM_ERROR بينما يعمل تطبيق الرسائل، عطّل هذا الخيار: بعض أجهزة المودم أو المشغلين يرفضون طلب الإشعار. تتم إعادة المحاولة تلقائيا بدون إشعار.</string>
     <string name="section_battery">البطارية والخلفية</string>
     <string name="min_battery">عدم الإرسال تحت هذا المستوى من البطارية (إلا أثناء الشحن)</string>
     <string name="min_battery_value">%1$d %%</string>

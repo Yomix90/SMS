@@ -74,6 +74,9 @@
     <string name="section_sim">Cartes SIM</string>
     <string name="sim_help">★ = SIM d\'envoi par défaut (réglable dans le tableau de bord). Chaque message peut aussi imposer une SIM.</string>
     <string name="no_sim_info">Aucune SIM détectée (ou permission téléphone refusée)</string>
+    <string name="section_sending">Envoi</string>
+    <string name="delivery_reports">Demander les accusés de livraison</string>
+    <string name="delivery_reports_help">Permet le statut « livré » dans le tableau de bord. Si les envois échouent avec MODEM_ERROR alors que l\'application Messages fonctionne, désactivez cette option : certains modems ou opérateurs refusent la demande d\'accusé. Les relances se font déjà automatiquement sans accusé.</string>
     <string name="section_battery">Batterie et arrière-plan</string>
     <string name="min_battery">Ne pas envoyer sous ce niveau de batterie (sauf en charge)</string>
     <string name="min_battery_value">%1$d %%</string>

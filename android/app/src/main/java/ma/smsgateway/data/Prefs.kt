@@ -77,6 +77,11 @@ class Prefs(context: Context) {
         get() = prefs.getInt(K_MIN_BATTERY, 15)
         set(v) = prefs.edit { putInt(K_MIN_BATTERY, v.coerceIn(0, 90)) }
 
+    /** Demander un accusé de livraison à l'opérateur (désactivable si le modem le refuse). */
+    var deliveryReports: Boolean
+        get() = prefs.getBoolean(K_DELIVERY, true)
+        set(v) = prefs.edit { putBoolean(K_DELIVERY, v) }
+
     val isPaired: Boolean get() = !token.isNullOrBlank() && serverUrl.isNotBlank()
 
     fun applyConfig(json: org.json.JSONObject) {
@@ -108,5 +113,6 @@ class Prefs(context: Context) {
         const val K_ENABLED = "server_enabled"
         const val K_PAUSED = "paused"
         const val K_MIN_BATTERY = "min_battery"
+        const val K_DELIVERY = "delivery_reports"
     }
 }

@@ -22,7 +22,7 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         data class Failed(val errorCode: String, val message: String) : Result()
     }
 
-    fun send(sms: OutgoingSms, defaultSlot: Int): Result {
+    fun send(sms: OutgoingSms, defaultSlot: Int, deliveryReports: Boolean = true): Result {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             return Result.Failed(ErrorCodes.PERMISSION_DENIED, "Permission SEND_SMS refusée")
         }
@@ -38,16 +38,18 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         return try {
             val manager = managerFor(subId)
             val parts = manager.divideMessage(sms.body)
+            val withReport = deliveryReports && sms.withDeliveryReport
             val sentIntents = ArrayList<PendingIntent>(parts.size)
             val deliveredIntents = ArrayList<PendingIntent>(parts.size)
             parts.indices.forEach { i ->
                 sentIntents += pending(SmsStatusReceiver.ACTION_SENT, sms.id, i, parts.size)
-                deliveredIntents += pending(SmsStatusReceiver.ACTION_DELIVERED, sms.id, i, parts.size)
+                if (withReport) deliveredIntents += pending(SmsStatusReceiver.ACTION_DELIVERED, sms.id, i, parts.size)
             }
             if (parts.size == 1) {
-                manager.sendTextMessage(sms.phone, null, sms.body, sentIntents[0], deliveredIntents[0])
+                manager.sendTextMessage(sms.phone, null, sms.body, sentIntents[0], deliveredIntents.firstOrNull())
             } else {
-                manager.sendMultipartTextMessage(sms.phone, null, parts, sentIntents, deliveredIntents)
+                manager.sendMultipartTextMessage(sms.phone, null, parts, sentIntents,
+                    if (withReport) deliveredIntents else null)
             }
             Result.Submitted(parts.size, usedSlot)
         } catch (e: SecurityException) {

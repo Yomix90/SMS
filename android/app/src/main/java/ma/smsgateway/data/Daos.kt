@@ -34,7 +34,7 @@ interface OutgoingDao {
     @Query("SELECT MAX(sendingAt) FROM outgoing")
     suspend fun lastSendingAt(): Long?
 
-    @Query("UPDATE outgoing SET status = 'sending', sendingAt = :now, partsTotal = :parts, partsSent = 0, partsDelivered = 0, errorCode = NULL WHERE id = :id")
+    @Query("UPDATE outgoing SET status = 'sending', sendingAt = :now, partsTotal = :parts, partsSent = 0, partsDelivered = 0, errorCode = NULL, attempts = attempts + 1 WHERE id = :id")
     suspend fun markSending(id: String, parts: Int, now: Long = System.currentTimeMillis())
 
     @Query("UPDATE outgoing SET partsSent = partsSent + 1 WHERE id = :id")
@@ -49,6 +49,10 @@ interface OutgoingDao {
     /** Envois restés sans accusé (téléphone redémarré, radio bloquée…). */
     @Query("SELECT * FROM outgoing WHERE status = 'sending' AND sendingAt < :before")
     suspend fun stuckSending(before: Long): List<OutgoingSms>
+
+    /** Relance demandée par le serveur après un échec : le message repasse en file. */
+    @Query("UPDATE outgoing SET status = 'pending', errorCode = NULL, sentAt = NULL, withDeliveryReport = :withReport WHERE id = :id")
+    suspend fun resetForRetry(id: String, withReport: Boolean)
 
     @Query("UPDATE outgoing SET status = 'canceled' WHERE id = :id AND status = 'pending'")
     suspend fun cancelIfPending(id: String): Int

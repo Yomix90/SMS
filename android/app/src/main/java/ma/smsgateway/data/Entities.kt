@@ -30,6 +30,8 @@ data class OutgoingSms(
     val createdAt: Long = System.currentTimeMillis(),
     val sendingAt: Long? = null,
     val sentAt: Long? = null,
+    val attempts: Int = 0,                // envois tentés sur ce téléphone
+    val withDeliveryReport: Boolean = true,
 )
 
 /** Boîte d'envoi des statuts à remonter au serveur (rejouée à la reconnexion). */

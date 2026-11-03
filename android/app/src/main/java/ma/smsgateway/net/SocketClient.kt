@@ -10,6 +10,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import org.json.JSONObject
 import java.net.URI
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 
 /**
@@ -34,6 +35,17 @@ class SocketClient(
 
     private var socket: Socket? = null
 
+    /**
+     * Client dédié au temps réel : pas de délai de lecture (la connexion reste ouverte en
+     * permanence) et un ping WebSocket toutes les 20 s, qui garde la liaison active à travers
+     * Traefik / Nginx et les NAT des opérateurs mobiles (sinon : « transport error »).
+     */
+    private val socketHttp: OkHttpClient = http.newBuilder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
+        .pingInterval(20, TimeUnit.SECONDS)
+        .build()
+
     val isConnected: Boolean get() = socket?.connected() == true
 
     fun connect() {
@@ -46,8 +58,8 @@ class SocketClient(
             reconnectionDelayMax = 30_000
             timeout = 20_000
             auth = mapOf("token" to token)
-            callFactory = http
-            webSocketFactory = http
+            callFactory = socketHttp
+            webSocketFactory = socketHttp
         }
         val s = IO.socket(URI.create("${serverUrl.trimEnd('/')}/device"), opts)
         s.on(Socket.EVENT_CONNECT) { listener.onConnected() }
