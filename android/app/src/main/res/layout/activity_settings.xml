@@ -97,6 +97,18 @@
                     android:text="@string/delivery_reports_help"
                     android:textColor="?android:attr/textColorSecondary" android:textSize="12sp" />
 
+                <TextView android:id="@+id/defaultSmsStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:textSize="13sp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDefaultSms"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/default_sms_help"
+                    android:textColor="?android:attr/textColorSecondary" android:textSize="12sp" />
+
                 <TextView android:id="@+id/sendVariant" android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:layout_marginTop="12dp" android:textSize="13sp" />
                 <com.google.android.material.button.MaterialButton

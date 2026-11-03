@@ -71,6 +71,17 @@
     <string name="section_sending">الإرسال</string>
     <string name="delivery_reports">طلب إشعارات التسليم</string>
     <string name="delivery_reports_help">يتيح حالة «مستلم» في لوحة التحكم. إذا فشل الإرسال بخطأ MODEM_ERROR بينما يعمل تطبيق الرسائل، عطّل هذا الخيار: بعض أجهزة المودم أو المشغلين يرفضون طلب الإشعار. تتم إعادة المحاولة تلقائيا بدون إشعار.</string>
+    <string name="default_sms_yes">✓ SMS Gateway هو تطبيق الرسائل الافتراضي</string>
+    <string name="default_sms_no">SMS Gateway ليس تطبيق الرسائل الافتراضي</string>
+    <string name="default_sms_set">تعيينه كتطبيق الرسائل الافتراضي</string>
+    <string name="default_sms_restore">العودة إلى تطبيق الرسائل</string>
+    <string name="default_sms_help">في بعض الهواتف (vivo خصوصا) لا يمكن الإرسال إلا لتطبيق الرسائل الافتراضي: تفشل التطبيقات الأخرى بخطأ MODEM_ERROR. تبقى الرسائل الواردة ظاهرة في تطبيق الرسائل؛ للكتابة بنفسك، عد مؤقتا إلى تطبيق الرسائل. لا تُستقبل رسائل MMS في هذا الوضع.</string>
+    <string name="compose_title">رسالة جديدة</string>
+    <string name="compose_to">الرقم</string>
+    <string name="compose_body">الرسالة</string>
+    <string name="compose_send">إرسال</string>
+    <string name="compose_sent">تم إرسال الرسالة</string>
+    <string name="compose_failed">فشل الإرسال</string>
     <string name="send_variant">طريقة الإرسال: %1$s</string>
     <string name="diagnostic_button">اختبار الإرسال (تشخيص)</string>
     <string name="diagnostic_help">إذا فشل الإرسال (MODEM_ERROR) بينما يعمل تطبيق الرسائل: يرسل حتى 6 رسائل تجريبية إلى رقمك بطرق مختلفة ويحتفظ بأول طريقة تنجح.</string>

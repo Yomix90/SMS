@@ -84,6 +84,8 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
                 manager.sendMultipartTextMessage(destination, null, parts, sentIntents,
                     if (options.deliveryReports) deliveredIntents else null)
             }
+            // Application SMS par défaut : Android n'archive pas l'envoi, on le fait pour l'app Messages
+            DefaultSmsApp.writeSent(context, destination, body, subId)
             Result.Submitted(parts.size, usedSlot)
         } catch (e: SecurityException) {
             Result.Failed(ErrorCodes.PERMISSION_DENIED, e.message ?: "SecurityException")

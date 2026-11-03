@@ -8,6 +8,14 @@
         <item name="materialCardViewStyle">@style/Widget.SmsGateway.Card</item>
     </style>
 
+    <!-- Fenêtre transparente : seule la boîte de dialogue de rédaction est visible -->
+    <style name="Theme.SmsGateway.Translucent">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <style name="Widget.SmsGateway.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/card_bg</item>
         <item name="cardCornerRadius">16dp</item>

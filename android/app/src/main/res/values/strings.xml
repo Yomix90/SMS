@@ -77,6 +77,17 @@
     <string name="section_sending">Envoi</string>
     <string name="delivery_reports">Demander les accusés de livraison</string>
     <string name="delivery_reports_help">Permet le statut « livré » dans le tableau de bord. Si les envois échouent avec MODEM_ERROR alors que l\'application Messages fonctionne, désactivez cette option : certains modems ou opérateurs refusent la demande d\'accusé. Les relances se font déjà automatiquement sans accusé.</string>
+    <string name="default_sms_yes">✓ SMS Gateway est l\'application SMS par défaut</string>
+    <string name="default_sms_no">SMS Gateway n\'est pas l\'application SMS par défaut</string>
+    <string name="default_sms_set">Définir comme application SMS par défaut</string>
+    <string name="default_sms_restore">Revenir à l\'application Messages</string>
+    <string name="default_sms_help">Sur certains téléphones (vivo notamment), seule l\'application SMS par défaut peut envoyer : les autres échouent avec MODEM_ERROR. Les SMS reçus restent visibles dans l\'application Messages ; pour écrire vous-même, revenez temporairement à Messages. Les MMS ne sont pas reçus dans ce mode.</string>
+    <string name="compose_title">Nouveau SMS</string>
+    <string name="compose_to">Numéro</string>
+    <string name="compose_body">Message</string>
+    <string name="compose_send">Envoyer</string>
+    <string name="compose_sent">SMS envoyé</string>
+    <string name="compose_failed">Échec de l\'envoi</string>
     <string name="send_variant">Méthode d\'envoi : %1$s</string>
     <string name="diagnostic_button">Tester l\'envoi (diagnostic)</string>
     <string name="diagnostic_help">Si les SMS échouent (MODEM_ERROR) alors que l\'application Messages fonctionne : envoie jusqu\'à 6 SMS de test vers votre numéro avec différentes méthodes et garde la première qui fonctionne.</string>

@@ -10,7 +10,9 @@ import ma.smsgateway.App
 import ma.smsgateway.BuildConfig
 import ma.smsgateway.R
 import ma.smsgateway.databinding.ActivitySettingsBinding
+import ma.smsgateway.sms.DefaultSmsApp
 import ma.smsgateway.sms.SimManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -22,6 +24,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
     private val prefs by lazy { App.from(this).prefs }
+
+    private val defaultSmsRequest = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        val log = App.from(this).log
+        if (DefaultSmsApp.isDefault(this)) log.info("SMS Gateway est l'application SMS par défaut")
+        else log.info("SMS Gateway n'est pas l'application SMS par défaut")
+        render()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +54,11 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         binding.btnDiagnostic.setOnClickListener { askDiagnosticNumber() }
+        binding.btnDefaultSms.setOnClickListener {
+            val intent = if (DefaultSmsApp.isDefault(this)) DefaultSmsApp.restoreIntent() else DefaultSmsApp.requestIntent(this)
+            runCatching { defaultSmsRequest.launch(intent) }
+                .onFailure { startActivity(Permissions.appSettingsIntent(this)) }
+        }
 
         binding.btnBattery.setOnClickListener {
             runCatching { startActivity(Permissions.batteryOptimizationIntent(this)) }
@@ -82,6 +96,9 @@ class SettingsActivity : AppCompatActivity() {
         binding.oemHint.isVisible = binding.oemHint.text.isNotBlank()
         binding.btnUnpair.isEnabled = paired
         binding.sendVariant.text = getString(R.string.send_variant, prefs.sendOptions().describe())
+        val isDefault = DefaultSmsApp.isDefault(this)
+        binding.defaultSmsStatus.text = getString(if (isDefault) R.string.default_sms_yes else R.string.default_sms_no)
+        binding.btnDefaultSms.text = getString(if (isDefault) R.string.default_sms_restore else R.string.default_sms_set)
     }
 
     // --- Diagnostic d'envoi -------------------------------------------------------------
