@@ -8,6 +8,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
+import ma.smsgateway.App
 import ma.smsgateway.data.OutgoingSms
 import ma.smsgateway.receiver.SmsStatusReceiver
 
@@ -68,6 +69,8 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         val subId = sims.subscriptionIdForSlot(slot) ?: activeSims.firstOrNull()?.subscriptionId
         val usedSlot = activeSims.firstOrNull { it.subscriptionId == subId }?.slot ?: slot
         val destination = formatNumber(phone, options.nationalFormat)
+        // Centre SMS saisi pour cette SIM (null = celui de la carte SIM, comportement standard)
+        val smsc = App.from(context).prefs.smsc(usedSlot).ifBlank { null }
 
         return try {
             val manager = managerFor(if (options.defaultManager) null else subId)
@@ -79,9 +82,9 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
                 if (options.deliveryReports) deliveredIntents += intentFor(SmsStatusReceiver.ACTION_DELIVERED, i, parts.size)
             }
             if (parts.size == 1 && !options.forceMultipart) {
-                manager.sendTextMessage(destination, null, body, sentIntents[0], deliveredIntents.firstOrNull())
+                manager.sendTextMessage(destination, smsc, body, sentIntents[0], deliveredIntents.firstOrNull())
             } else {
-                manager.sendMultipartTextMessage(destination, null, parts, sentIntents,
+                manager.sendMultipartTextMessage(destination, smsc, parts, sentIntents,
                     if (options.deliveryReports) deliveredIntents else null)
             }
             // Application SMS par défaut : Android n'archive pas l'envoi, on le fait pour l'app Messages

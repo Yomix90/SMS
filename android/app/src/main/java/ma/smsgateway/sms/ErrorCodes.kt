@@ -17,6 +17,7 @@ object ErrorCodes {
     const val PERMISSION_DENIED = "PERMISSION_DENIED"
     const val NO_SIM = "NO_SIM"
     const val SIM_NOT_READY = "SIM_NOT_READY"
+    const val NO_DEFAULT_SIM = "NO_DEFAULT_SIM"
     const val DELIVERY_FAILED = "DELIVERY_FAILED"
     const val TIMEOUT = "TIMEOUT"
 
@@ -34,7 +35,8 @@ object ErrorCodes {
         SmsManager.RESULT_MODEM_ERROR, SmsManager.RESULT_RIL_MODEM_ERR -> MODEM_ERROR
         SmsManager.RESULT_INVALID_SMS_FORMAT, SmsManager.RESULT_INVALID_ARGUMENTS,
         SmsManager.RESULT_INVALID_SMSC_ADDRESS -> INVALID_NUMBER
-        SmsManager.RESULT_NO_DEFAULT_SMS_APP -> PERMISSION_DENIED
+        // Gestionnaire par défaut sans SIM SMS par défaut (réglage « Demander à chaque fois »)
+        SmsManager.RESULT_NO_DEFAULT_SMS_APP -> NO_DEFAULT_SIM
         SmsManager.RESULT_RIL_SIM_ABSENT -> NO_SIM
         SmsManager.RESULT_RIL_RADIO_NOT_AVAILABLE -> RADIO_OFF
         else -> "${GENERIC_FAILURE}_$resultCode"

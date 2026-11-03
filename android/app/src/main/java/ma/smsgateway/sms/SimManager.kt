@@ -54,6 +54,16 @@ class SimManager(private val context: Context) {
         null
     }
 
+    /** Centre SMS (SMSC) lu sur la SIM, si Android l'autorise (souvent refusé hors app système). */
+    @SuppressLint("MissingPermission")
+    fun detectSmsc(subscriptionId: Int): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return null
+        return runCatching {
+            context.getSystemService(android.telephony.SmsManager::class.java)
+                .createForSubscriptionId(subscriptionId).smscAddress
+        }.getOrNull()?.trim()?.takeIf { it.isNotBlank() }
+    }
+
     fun toJson(): JSONArray = JSONArray().apply {
         activeSims().forEach { sim ->
             put(JSONObject().put("slot", sim.slot).put("subscription_id", sim.subscriptionId)

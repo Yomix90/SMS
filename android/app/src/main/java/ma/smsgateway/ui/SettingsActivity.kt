@@ -54,6 +54,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         binding.btnDiagnostic.setOnClickListener { askDiagnosticNumber() }
+        binding.btnSmsc.setOnClickListener { chooseSmscSim() }
         binding.btnDefaultSms.setOnClickListener {
             val intent = if (DefaultSmsApp.isDefault(this)) DefaultSmsApp.restoreIntent() else DefaultSmsApp.requestIntent(this)
             runCatching { defaultSmsRequest.launch(intent) }
@@ -88,7 +89,8 @@ class SettingsActivity : AppCompatActivity() {
         val sims = SimManager(this).activeSims()
         binding.sims.text = if (sims.isEmpty()) getString(R.string.no_sim_info) else sims.joinToString("\n") { sim ->
             val default = if (sim.slot == prefs.defaultSimSlot) " ★" else ""
-            "SIM ${sim.slot + 1} · ${sim.carrier ?: "?"}${sim.number?.let { " · $it" } ?: ""}$default"
+            val smsc = prefs.smsc(sim.slot).ifBlank { null }?.let { "\n    " + getString(R.string.smsc_value, it) } ?: ""
+            "SIM ${sim.slot + 1} · ${sim.carrier ?: "?"}${sim.number?.let { " · $it" } ?: ""}$default$smsc"
         }
         binding.batteryStatus.text = getString(
             if (Permissions.isIgnoringBatteryOptimizations(this)) R.string.battery_unrestricted else R.string.battery_restricted)
@@ -99,6 +101,44 @@ class SettingsActivity : AppCompatActivity() {
         val isDefault = DefaultSmsApp.isDefault(this)
         binding.defaultSmsStatus.text = getString(if (isDefault) R.string.default_sms_yes else R.string.default_sms_no)
         binding.btnDefaultSms.text = getString(if (isDefault) R.string.default_sms_restore else R.string.default_sms_set)
+    }
+
+    // --- Centre SMS (SMSC) ---------------------------------------------------------------
+
+    private fun chooseSmscSim() {
+        val sims = SimManager(this).activeSims()
+        if (sims.isEmpty()) return
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.smsc_button)
+            .setItems(sims.map { "SIM ${it.slot + 1} · ${it.carrier ?: "?"}" }.toTypedArray()) { _, which ->
+                editSmsc(sims[which].slot, sims[which].subscriptionId)
+            }
+            .show()
+    }
+
+    private fun editSmsc(slot: Int, subscriptionId: Int) {
+        val detected = SimManager(this).detectSmsc(subscriptionId)
+        val input = android.widget.EditText(this).apply {
+            hint = "+212…"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            setText(prefs.smsc(slot).ifBlank { detected.orEmpty() })
+            setPadding(48, 32, 48, 32)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.smsc_title, slot + 1))
+            .setMessage(if (detected != null) getString(R.string.smsc_detected, detected) else getString(R.string.smsc_not_detected))
+            .setView(input)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                prefs.setSmsc(slot, input.text.toString())
+                App.from(this).log.info("Centre SMS SIM ${slot + 1} : ${prefs.smsc(slot).ifBlank { "celui de la SIM" }}")
+                render()
+            }
+            .setNeutralButton(R.string.smsc_clear) { _, _ ->
+                prefs.setSmsc(slot, "")
+                render()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     // --- Diagnostic d'envoi -------------------------------------------------------------
@@ -135,7 +175,9 @@ class SettingsActivity : AppCompatActivity() {
         val text = android.widget.TextView(this).apply {
             setPadding(56, 24, 56, 0)
             textSize = 13f
-            text = getString(R.string.diagnostic_running, phone, slot + 1)
+            text = getString(R.string.diagnostic_running, phone, slot + 1) + "\n" +
+                getString(if (DefaultSmsApp.isDefault(this@SettingsActivity)) R.string.default_sms_yes else R.string.default_sms_no) +
+                "\n" + getString(R.string.smsc_value, prefs.smsc(slot).ifBlank { getString(R.string.smsc_from_sim) })
         }
         val dialog = MaterialAlertDialogBuilder(this)
             .setTitle(R.string.diagnostic_button)

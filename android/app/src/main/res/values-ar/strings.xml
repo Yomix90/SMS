@@ -68,6 +68,14 @@
     <string name="section_sim">الشرائح</string>
     <string name="sim_help">★ = شريحة الإرسال الافتراضية (تُضبط من لوحة التحكم). يمكن لكل رسالة أيضا فرض شريحة معينة.</string>
     <string name="no_sim_info">لم يتم اكتشاف أي شريحة (أو تم رفض إذن الهاتف)</string>
+    <string name="smsc_button">مركز الرسائل (SMSC)</string>
+    <string name="smsc_help">إذا فشل الإرسال بخطأ MODEM_ERROR بينما يعمل تطبيق الرسائل، فقد يكون مركز الرسائل المسجل في الشريحة غائبا: انسخ هنا رقم المركز من تطبيق الرسائل (الرسائل › الإعدادات › مركز الرسائل / SMSC).</string>
+    <string name="smsc_title">مركز رسائل الشريحة %1$d</string>
+    <string name="smsc_detected">مقروء من الشريحة: %1$s. اتركه فارغا لاستعماله.</string>
+    <string name="smsc_not_detected">لا يسمح Android بقراءته على هذا الهاتف. انسخ الرقم المعروض في تطبيق الرسائل، أو اتركه فارغا.</string>
+    <string name="smsc_clear">مسح</string>
+    <string name="smsc_value">مركز الرسائل: %1$s</string>
+    <string name="smsc_from_sim">مركز الشريحة</string>
     <string name="section_sending">الإرسال</string>
     <string name="delivery_reports">طلب إشعارات التسليم</string>
     <string name="delivery_reports_help">يتيح حالة «مستلم» في لوحة التحكم. إذا فشل الإرسال بخطأ MODEM_ERROR بينما يعمل تطبيق الرسائل، عطّل هذا الخيار: بعض أجهزة المودم أو المشغلين يرفضون طلب الإشعار. تتم إعادة المحاولة تلقائيا بدون إشعار.</string>

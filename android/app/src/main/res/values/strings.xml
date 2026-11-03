@@ -74,6 +74,14 @@
     <string name="section_sim">Cartes SIM</string>
     <string name="sim_help">★ = SIM d\'envoi par défaut (réglable dans le tableau de bord). Chaque message peut aussi imposer une SIM.</string>
     <string name="no_sim_info">Aucune SIM détectée (ou permission téléphone refusée)</string>
+    <string name="smsc_button">Centre SMS (SMSC)</string>
+    <string name="smsc_help">Si l\'envoi échoue avec MODEM_ERROR alors que l\'application Messages fonctionne, le centre SMS enregistré sur la SIM est peut-être absent : recopiez ici celui de l\'application Messages (Messages › Paramètres › Centre de messagerie / SMSC).</string>
+    <string name="smsc_title">Centre SMS de la SIM %1$d</string>
+    <string name="smsc_detected">Lu sur la SIM : %1$s. Laissez vide pour l\'utiliser.</string>
+    <string name="smsc_not_detected">Android ne permet pas de le lire sur ce téléphone. Recopiez le numéro affiché dans l\'application Messages, ou laissez vide.</string>
+    <string name="smsc_clear">Effacer</string>
+    <string name="smsc_value">Centre SMS : %1$s</string>
+    <string name="smsc_from_sim">celui de la SIM</string>
     <string name="section_sending">Envoi</string>
     <string name="delivery_reports">Demander les accusés de livraison</string>
     <string name="delivery_reports_help">Permet le statut « livré » dans le tableau de bord. Si les envois échouent avec MODEM_ERROR alors que l\'application Messages fonctionne, désactivez cette option : certains modems ou opérateurs refusent la demande d\'accusé. Les relances se font déjà automatiquement sans accusé.</string>

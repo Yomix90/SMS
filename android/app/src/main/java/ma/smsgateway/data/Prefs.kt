@@ -95,6 +95,11 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(K_MULTIPART, false)
         set(v) = prefs.edit { putBoolean(K_MULTIPART, v) }
 
+    /** Centre SMS (SMSC) imposé pour une SIM ; vide = celui enregistré sur la carte SIM. */
+    fun smsc(slot: Int): String = prefs.getString("$K_SMSC$slot", "") ?: ""
+
+    fun setSmsc(slot: Int, value: String) = prefs.edit { putString("$K_SMSC$slot", value.filter { it.isDigit() || it == '+' }) }
+
     fun sendOptions() = ma.smsgateway.sms.SendOptions(
         deliveryReports = deliveryReports, nationalFormat = sendNationalFormat,
         defaultManager = sendDefaultManager, forceMultipart = sendForceMultipart,
@@ -135,5 +140,6 @@ class Prefs(context: Context) {
         const val K_NATIONAL = "send_national_format"
         const val K_DEFAULT_MANAGER = "send_default_manager"
         const val K_MULTIPART = "send_force_multipart"
+        const val K_SMSC = "smsc_slot_"
     }
 }
