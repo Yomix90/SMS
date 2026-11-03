@@ -33,3 +33,4 @@ android/keystore.properties
 android/.kotlin/
 .claude/
 *.log
+/*.apk
