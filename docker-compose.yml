@@ -1,4 +1,4 @@
-# SMS Gateway — déploiement via une plateforme (Dokploy, Coolify, Portainer, CapRover…)
+# SMS Gateway — déploiement via une plateforme (configuré pour Dokploy ; adaptable à Coolify, Portainer…)
 #
 # La plateforme fournit le domaine, le HTTPS et le reverse proxy (Traefik) : ce fichier ne
 # contient donc ni Nginx ni Certbot. Dans l'interface de la plateforme :
@@ -48,6 +48,9 @@ services:
       - instance:/app/instance
     expose:
       - "8000"
+    networks:
+      - default            # accès à la base
+      - dokploy-network    # réseau de Traefik (Dokploy) : sans lui, Traefik répond « 404 page not found »
 
   backup:
     image: postgres:16-alpine
@@ -72,3 +75,9 @@ volumes:
   pgdata:
   instance:
   backups:
+
+networks:
+  # Réseau créé par Dokploy. Autre plateforme : remplacez-le par le réseau de son reverse proxy,
+  # ou supprimez cette section et la ligne « dokploy-network » du service web.
+  dokploy-network:
+    external: true
