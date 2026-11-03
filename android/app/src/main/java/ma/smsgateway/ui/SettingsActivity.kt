@@ -11,6 +11,8 @@ import ma.smsgateway.BuildConfig
 import ma.smsgateway.R
 import ma.smsgateway.databinding.ActivitySettingsBinding
 import ma.smsgateway.sms.SimManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 /**
  * Paramètres : serveur, SIM, limites d'envoi (définies depuis le tableau de bord),
@@ -41,6 +43,8 @@ class SettingsActivity : AppCompatActivity() {
             prefs.deliveryReports = checked
             App.from(this).log.info(if (checked) "Accusés de livraison activés" else "Accusés de livraison désactivés")
         }
+
+        binding.btnDiagnostic.setOnClickListener { askDiagnosticNumber() }
 
         binding.btnBattery.setOnClickListener {
             runCatching { startActivity(Permissions.batteryOptimizationIntent(this)) }
@@ -77,6 +81,64 @@ class SettingsActivity : AppCompatActivity() {
         binding.oemHint.text = Permissions.manufacturerHint(this)
         binding.oemHint.isVisible = binding.oemHint.text.isNotBlank()
         binding.btnUnpair.isEnabled = paired
+        binding.sendVariant.text = getString(R.string.send_variant, prefs.sendOptions().describe())
+    }
+
+    // --- Diagnostic d'envoi -------------------------------------------------------------
+
+    private fun askDiagnosticNumber() {
+        val input = android.widget.EditText(this).apply {
+            hint = "06 12 34 56 78"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            setPadding(48, 32, 48, 32)
+        }
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.diagnostic_button)
+            .setMessage(R.string.diagnostic_number)
+            .setView(input)
+            .setPositiveButton(R.string.diagnostic_next) { _, _ ->
+                val phone = ma.smsgateway.sms.SendDiagnostic.normalize(input.text.toString())
+                if (phone.length >= 8) askDiagnosticSim(phone)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun askDiagnosticSim(phone: String) {
+        val sims = SimManager(this).activeSims()
+        val labels = if (sims.isEmpty()) arrayOf("SIM 1") else
+            sims.map { "SIM ${it.slot + 1} · ${it.carrier ?: "?"}" }.toTypedArray()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.diagnostic_sim)
+            .setItems(labels) { _, which -> runDiagnostic(phone, sims.getOrNull(which)?.slot ?: 0) }
+            .show()
+    }
+
+    private fun runDiagnostic(phone: String, slot: Int) {
+        val text = android.widget.TextView(this).apply {
+            setPadding(56, 24, 56, 0)
+            textSize = 13f
+            text = getString(R.string.diagnostic_running, phone, slot + 1)
+        }
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.diagnostic_button)
+            .setView(text)
+            .setCancelable(false)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = false
+        lifecycleScope.launch {
+            val found = ma.smsgateway.sms.SendDiagnostic(this@SettingsActivity).run(phone, slot) { step ->
+                runOnUiThread {
+                    text.append("\n${if (step.ok) "✓" else "✗"} ${step.index}/${step.total} · ${step.options.describe()}" +
+                        if (step.ok) "" else "\n    ${step.detail}")
+                }
+            }
+            text.append("\n\n" + if (found != null) getString(R.string.diagnostic_found, found.describe())
+                else getString(R.string.diagnostic_none))
+            dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).isEnabled = true
+            render()
+        }
     }
 
     private fun batteryLabel(value: Int) =

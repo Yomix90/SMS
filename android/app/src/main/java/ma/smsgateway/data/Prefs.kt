@@ -82,6 +82,24 @@ class Prefs(context: Context) {
         get() = prefs.getBoolean(K_DELIVERY, true)
         set(v) = prefs.edit { putBoolean(K_DELIVERY, v) }
 
+    // Variante d'appel SmsManager mémorisée par le diagnostic d'envoi
+    var sendNationalFormat: Boolean
+        get() = prefs.getBoolean(K_NATIONAL, false)
+        set(v) = prefs.edit { putBoolean(K_NATIONAL, v) }
+
+    var sendDefaultManager: Boolean
+        get() = prefs.getBoolean(K_DEFAULT_MANAGER, false)
+        set(v) = prefs.edit { putBoolean(K_DEFAULT_MANAGER, v) }
+
+    var sendForceMultipart: Boolean
+        get() = prefs.getBoolean(K_MULTIPART, false)
+        set(v) = prefs.edit { putBoolean(K_MULTIPART, v) }
+
+    fun sendOptions() = ma.smsgateway.sms.SendOptions(
+        deliveryReports = deliveryReports, nationalFormat = sendNationalFormat,
+        defaultManager = sendDefaultManager, forceMultipart = sendForceMultipart,
+    )
+
     val isPaired: Boolean get() = !token.isNullOrBlank() && serverUrl.isNotBlank()
 
     fun applyConfig(json: org.json.JSONObject) {
@@ -114,5 +132,8 @@ class Prefs(context: Context) {
         const val K_PAUSED = "paused"
         const val K_MIN_BATTERY = "min_battery"
         const val K_DELIVERY = "delivery_reports"
+        const val K_NATIONAL = "send_national_format"
+        const val K_DEFAULT_MANAGER = "send_default_manager"
+        const val K_MULTIPART = "send_force_multipart"
     }
 }

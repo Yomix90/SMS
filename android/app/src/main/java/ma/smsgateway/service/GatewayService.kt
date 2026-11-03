@@ -189,7 +189,7 @@ class GatewayService : Service(), SocketClient.Listener {
         if (now - last < interval) return interval - (now - last)
         setBlocked(null)
 
-        when (val result = sender.send(next, prefs.defaultSimSlot, prefs.deliveryReports)) {
+        when (val result = sender.send(next, prefs.defaultSimSlot, prefs.sendOptions())) {
             is SmsSender.Result.Submitted -> {
                 db.outgoing().markSending(next.id, result.parts)
                 log.info("Envoi → ${next.phone} (SIM ${(result.simSlot ?: 0) + 1}, ${result.parts} segment(s))")

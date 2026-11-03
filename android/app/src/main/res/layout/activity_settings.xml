@@ -96,6 +96,19 @@
                 <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
                     android:text="@string/delivery_reports_help"
                     android:textColor="?android:attr/textColorSecondary" android:textSize="12sp" />
+
+                <TextView android:id="@+id/sendVariant" android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp" android:textSize="13sp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnDiagnostic"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/diagnostic_button" />
+                <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:text="@string/diagnostic_help"
+                    android:textColor="?android:attr/textColorSecondary" android:textSize="12sp" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

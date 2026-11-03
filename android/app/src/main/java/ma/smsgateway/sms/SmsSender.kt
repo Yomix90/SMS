@@ -12,6 +12,28 @@ import ma.smsgateway.data.OutgoingSms
 import ma.smsgateway.receiver.SmsStatusReceiver
 
 /**
+ * Manière d'appeler SmsManager. Certains modems / ROM (Xiaomi notamment) refusent une variante
+ * (resultCode 111 = RIL_MODEM_ERR) alors qu'une autre passe : le diagnostic d'envoi teste ces
+ * variantes et mémorise celle qui fonctionne (voir SendDiagnostic).
+ */
+data class SendOptions(
+    val deliveryReports: Boolean = true,
+    /** Numéro marocain au format national (0612345678) au lieu de +212612345678. */
+    val nationalFormat: Boolean = false,
+    /** Gestionnaire SMS par défaut du téléphone au lieu de celui de la SIM choisie. */
+    val defaultManager: Boolean = false,
+    /** Toujours passer par sendMultipartTextMessage, même pour un seul segment. */
+    val forceMultipart: Boolean = false,
+) {
+    fun describe(): String = buildList {
+        add(if (nationalFormat) "numéro 06…" else "numéro +212…")
+        add(if (defaultManager) "gestionnaire par défaut" else "gestionnaire de la SIM")
+        add(if (forceMultipart) "multipart" else "simple")
+        add(if (deliveryReports) "avec accusé" else "sans accusé")
+    }.joinToString(", ")
+}
+
+/**
  * Envoi via SmsManager : découpage multipart (GSM-7 / UCS-2 géré par Android, donc l'arabe aussi),
  * choix de la SIM, et un PendingIntent par segment pour les accusés d'envoi et de livraison.
  */
@@ -22,11 +44,22 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         data class Failed(val errorCode: String, val message: String) : Result()
     }
 
-    fun send(sms: OutgoingSms, defaultSlot: Int, deliveryReports: Boolean = true): Result {
+    fun send(sms: OutgoingSms, defaultSlot: Int, options: SendOptions): Result {
+        val opts = options.copy(deliveryReports = options.deliveryReports && sms.withDeliveryReport)
+        return sendRaw(sms.phone, sms.body, sms.simSlot ?: defaultSlot, opts) { action, part, total ->
+            statusIntent(action, sms.id, part, total)
+        }
+    }
+
+    /**
+     * Envoi bas niveau, partagé avec le diagnostic.
+     * [intentFor] fournit le PendingIntent de chaque accusé (action, segment, total).
+     */
+    fun sendRaw(phone: String, body: String, slot: Int, options: SendOptions,
+                intentFor: (action: String, part: Int, total: Int) -> PendingIntent): Result {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
             return Result.Failed(ErrorCodes.PERMISSION_DENIED, "Permission SEND_SMS refusée")
         }
-        val slot = sms.simSlot ?: defaultSlot
         val activeSims = sims.activeSims()
         if (activeSims.isEmpty() && hasPhoneStatePermission()) {
             return Result.Failed(ErrorCodes.NO_SIM, "Aucune carte SIM active")
@@ -34,22 +67,22 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         // SIM demandée absente : on retombe sur la première SIM active plutôt que d'échouer
         val subId = sims.subscriptionIdForSlot(slot) ?: activeSims.firstOrNull()?.subscriptionId
         val usedSlot = activeSims.firstOrNull { it.subscriptionId == subId }?.slot ?: slot
+        val destination = formatNumber(phone, options.nationalFormat)
 
         return try {
-            val manager = managerFor(subId)
-            val parts = manager.divideMessage(sms.body)
-            val withReport = deliveryReports && sms.withDeliveryReport
+            val manager = managerFor(if (options.defaultManager) null else subId)
+            val parts = manager.divideMessage(body)
             val sentIntents = ArrayList<PendingIntent>(parts.size)
             val deliveredIntents = ArrayList<PendingIntent>(parts.size)
             parts.indices.forEach { i ->
-                sentIntents += pending(SmsStatusReceiver.ACTION_SENT, sms.id, i, parts.size)
-                if (withReport) deliveredIntents += pending(SmsStatusReceiver.ACTION_DELIVERED, sms.id, i, parts.size)
+                sentIntents += intentFor(SmsStatusReceiver.ACTION_SENT, i, parts.size)
+                if (options.deliveryReports) deliveredIntents += intentFor(SmsStatusReceiver.ACTION_DELIVERED, i, parts.size)
             }
-            if (parts.size == 1) {
-                manager.sendTextMessage(sms.phone, null, sms.body, sentIntents[0], deliveredIntents.firstOrNull())
+            if (parts.size == 1 && !options.forceMultipart) {
+                manager.sendTextMessage(destination, null, body, sentIntents[0], deliveredIntents.firstOrNull())
             } else {
-                manager.sendMultipartTextMessage(sms.phone, null, parts, sentIntents,
-                    if (withReport) deliveredIntents else null)
+                manager.sendMultipartTextMessage(destination, null, parts, sentIntents,
+                    if (options.deliveryReports) deliveredIntents else null)
             }
             Result.Submitted(parts.size, usedSlot)
         } catch (e: SecurityException) {
@@ -74,7 +107,7 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         }
     }
 
-    private fun pending(action: String, id: String, part: Int, total: Int): PendingIntent {
+    private fun statusIntent(action: String, id: String, part: Int, total: Int): PendingIntent {
         val intent = Intent(context, SmsStatusReceiver::class.java).apply {
             this.action = action
             putExtra(SmsStatusReceiver.EXTRA_ID, id)
@@ -87,5 +120,11 @@ class SmsSender(private val context: Context, private val sims: SimManager) {
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or
             (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0)
         return PendingIntent.getBroadcast(context, requestCode, intent, flags)
+    }
+
+    companion object {
+        /** +212612345678 -> 0612345678 si demandé ; les autres numéros restent inchangés. */
+        fun formatNumber(phone: String, national: Boolean): String =
+            if (national && phone.startsWith("+212") && phone.length == 13) "0" + phone.substring(4) else phone
     }
 }

@@ -77,6 +77,15 @@
     <string name="section_sending">Envoi</string>
     <string name="delivery_reports">Demander les accusés de livraison</string>
     <string name="delivery_reports_help">Permet le statut « livré » dans le tableau de bord. Si les envois échouent avec MODEM_ERROR alors que l\'application Messages fonctionne, désactivez cette option : certains modems ou opérateurs refusent la demande d\'accusé. Les relances se font déjà automatiquement sans accusé.</string>
+    <string name="send_variant">Méthode d\'envoi : %1$s</string>
+    <string name="diagnostic_button">Tester l\'envoi (diagnostic)</string>
+    <string name="diagnostic_help">Si les SMS échouent (MODEM_ERROR) alors que l\'application Messages fonctionne : envoie jusqu\'à 6 SMS de test vers votre numéro avec différentes méthodes et garde la première qui fonctionne.</string>
+    <string name="diagnostic_number">Numéro qui recevra les SMS de test (le vôtre par exemple)</string>
+    <string name="diagnostic_next">Suivant</string>
+    <string name="diagnostic_sim">SIM à tester</string>
+    <string name="diagnostic_running">Envoi de SMS de test vers %1$s (SIM %2$d)…</string>
+    <string name="diagnostic_found">Méthode qui fonctionne, enregistrée pour tous les envois : %1$s</string>
+    <string name="diagnostic_none">Aucune méthode n\'a fonctionné : faites une capture de cet écran et transmettez-la au support.</string>
     <string name="section_battery">Batterie et arrière-plan</string>
     <string name="min_battery">Ne pas envoyer sous ce niveau de batterie (sauf en charge)</string>
     <string name="min_battery_value">%1$d %%</string>
